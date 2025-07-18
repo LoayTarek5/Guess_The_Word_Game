@@ -1,1 +1,96 @@
-<h1>SIGNUP</h1>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Render All Elements Normally -->
+    <link rel="stylesheet" href="/style/normalize.css" />
+    <!-- Font Awesome Library -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- Main Template CSS File -->
+    <link rel="stylesheet" href="/style/framwork.css" />
+    <link rel="stylesheet" href="/style/signup.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <title>Document</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="auth-container">
+        <header>
+          <i class="fa-solid fa-gamepad"></i>
+          <div class="text">
+            <h3>Create Account</h3>
+            <p>Join WordGuess and start playing!</p>
+          </div>
+        </header>
+        <from id="signup-form" class="auth-form">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Choose a username"
+              autocomplete="username"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="Enter your email"
+              autocomplete="email"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="password-group">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Create a password"
+                autocomplete="new-password"
+                required
+              />
+              <i class="fa-regular fa-eye"></i>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <div class="password-group">
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirm-password"
+                placeholder="Confirm your password"
+                autocomplete="new-password"
+                required
+              />
+              <i class="fa-regular fa-eye"></i>
+            </div>
+          </div>
+          <button type="submit" class="send-form">Create Account</button>
+        </from>
+        <div class="already-have">
+          <p>Already have an account?</p>
+          <a href="/auth/login">login</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
