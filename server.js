@@ -1,35 +1,31 @@
 import "dotenv/config"; 
 import express from "express";
-import expressLayouts from "express-ejs-layouts";
+// import expressLayouts from "express-ejs-layouts";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import mongoose from "mongoose";
-import userSchema from "./models/User.js";
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
-import indexRoutes from './routes/index.js';
+import path from "path";
 
 const PORT = process.env.PORT;
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
 
-
-
-app.set("view engine", "ejs");
-app.set("views", join(__dirname, "views"));
-app.set("layout", "layouts/layout");
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+// app.set("layout", "layouts/layout");
 
 app.use(express.json());
-app.use(expressLayouts);
-app.use(express.static(join(__dirname, "public")));
+// app.use(expressLayouts);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(express.static(join(__dirname, "public")));
 
 // Routes
 app.use('/auth', authRoutes);
-app.use('/', indexRoutes);
 
 
 // setup Mongo database
