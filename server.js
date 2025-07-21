@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
+import dashboardRoutes from './routes/dashboard.js';
 import path from "path";
 
 const PORT = process.env.PORT;
@@ -26,6 +27,7 @@ app.use(express.static(join(__dirname, "public")));
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 
 // setup Mongo database
