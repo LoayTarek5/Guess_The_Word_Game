@@ -4,7 +4,6 @@ import User from "../models/User.js";
 class AuthController {
   generateToken(userId) {
     const token = jwt.sign({ userId }, process.env.JWT_SECRET);
-    res.cookie("token", token, { httpOnly: true });
   }
   // Format user response
   formatUserResponse(user) {
@@ -27,13 +26,13 @@ class AuthController {
       if (!username || !email || !password || !confirmPassword) {
         return res.status(400).json({
           success: false,
-          error: "All fields are required",
+          message: "All fields are required",
         });
       }
       if (password !== confirmPassword) {
         return res.status(400).json({
           success: false,
-          error: "Passwords do not match",
+          message: "Passwords do not match",
         });
       }
 
@@ -42,20 +41,20 @@ class AuthController {
       if (usernameExists) {
         return res.status(400).json({
           success: false,
-          error: "Username is already taken",
+          message: "Username is already taken",
         });
       }
       if (emailExists) {
         return res.status(400).json({
           success: false,
-          error: "Email is already taken",
+          message: "Email is already taken",
         });
       }
       const newUser = new User({ username, email, password });
       await newUser.save();
 
       const token = this.generateToken(newUser._id);
-      
+      res.cookie("token", token, { httpOnly: true });
       res.status(201).json({
         success: true,
         message: "User created successfully",
@@ -77,7 +76,7 @@ class AuthController {
       }
       res.status(500).json({
         success: false,
-        error: "Something went wrong, please try again.",
+        message: "Something went wrong, please try again.",
       });
     }
   }
@@ -96,7 +95,7 @@ class AuthController {
       if (!user) {
         return res.status(400).json({
           success: false,
-          error: "Invalid username or password",
+          message: "Invalid username or password",
         });
       }
 
@@ -104,7 +103,7 @@ class AuthController {
       if (!validPassword) {
         return res.status(400).json({
           success: false,
-          error: "Invalid username or password",
+          message: "Invalid username or password",
         });
       }
 
@@ -124,7 +123,7 @@ class AuthController {
       console.error("Login error:", error);
       res.status(500).json({
         success: false,
-        error: "Something went wrong, please try again.",
+        message: "Something went wrong, please try again.",
       });
     }
   }
