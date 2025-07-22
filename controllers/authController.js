@@ -127,7 +127,7 @@ class AuthController {
       });
     }
   }
-  
+
   async logout(req, res) {
     try {
       // Update user status to offline
@@ -142,6 +142,30 @@ class AuthController {
       });
     } catch (error) {
       console.error("Logout error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Something went wrong",
+      });
+    }
+  }
+  // Get current user profile
+  async getProfile(req, res) {
+    try {
+      const user = await User.findById(req.user.userId);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        user: this.formatUserResponse(user),
+      });
+    } catch (error) {
+      console.error("Get profile error:", error);
       res.status(500).json({
         success: false,
         message: "Something went wrong",
