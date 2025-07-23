@@ -24,17 +24,38 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 // app.set("layout", "layouts/layout");
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://cdnjs.cloudflare.com",
+          "https://fonts.googleapis.com"      
+        ],
+        styleSrcElem: [
+          "'self'",
+          "https://cdnjs.cloudflare.com",
+          "https://fonts.googleapis.com"     
+        ],
+        // images
+        imgSrc: ["'self'", "data:", "https:"],
+        fontSrc: [
+          "'self'",
+          "https://cdnjs.cloudflare.com",
+          "https://fonts.gstatic.com"         
+        ],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        connectSrc: ["'self'", process.env.CLIENT_URL],
+      },
     },
-  },
-}));
+  })
+);
+
+
 
 // CORS - environment based
 app.use(cors({
