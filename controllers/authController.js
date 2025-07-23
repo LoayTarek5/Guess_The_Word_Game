@@ -1,9 +1,11 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-
+import logger from "../utils/logger.js";
 class AuthController {
   generateToken(userId) {
-    const token = jwt.sign({ userId }, process.env.JWT_SECRET);
+    return jwt.sign({ userId }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    });
   }
   // Format user response
   formatUserResponse(user) {
@@ -54,15 +56,22 @@ class AuthController {
       await newUser.save();
 
       const token = this.generateToken(newUser._id);
-      res.cookie("token", token, { httpOnly: true });
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // HTTPS only in production
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      logger.info(`New user registered: ${username}`);
+
       res.status(201).json({
         success: true,
         message: "User created successfully",
-        token,
         user: this.formatUserResponse(newUser),
       });
     } catch (error) {
-      console.error("Signup error:", error);
+      logger.error("Signup error:", error);
 
       // Handle duplicate key error Due To Race Conditions
       if (error.code === 11000) {
@@ -113,14 +122,22 @@ class AuthController {
       await user.save();
 
       const token = this.generateToken(user._id);
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+
+      logger.info(`User logged in: ${user.username}`);
       res.json({
         success: true,
         message: "Login successful",
-        token,
         user: this.formatUserResponse(user),
       });
     } catch (error) {
-      console.error("Login error:", error);
+      logger.error("Login error:", error);
       res.status(500).json({
         success: false,
         message: "Something went wrong, please try again.",
@@ -135,13 +152,14 @@ class AuthController {
         status: "offline",
         lastSeen: new Date(),
       });
-
+      res.clearCookie("token");
+       logger.info(`User logged out: ${req.user.userId}`);
       res.json({
         success: true,
         message: "Logged out successfully",
       });
     } catch (error) {
-      console.error("Logout error:", error);
+       logger.error("Logout error:", error);
       res.status(500).json({
         success: false,
         message: "Something went wrong",
@@ -164,8 +182,9 @@ class AuthController {
         success: true,
         user: this.formatUserResponse(user),
       });
+      
     } catch (error) {
-      console.error("Get profile error:", error);
+       logger.error("Get profile error:", error);
       res.status(500).json({
         success: false,
         message: "Something went wrong",
