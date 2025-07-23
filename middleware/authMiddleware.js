@@ -3,14 +3,15 @@ import User from "../models/User.js";
 
 export const authenticateToken = async (req, res, next) => {
   try {
-    const authorization = req.headers["authorization"];
-    const token = authorization.split(" ")[1];
+    const token = req.cookies.authToken;
+
     if (!token) {
       return res.status(401).json({
         success: false,
         message: "Access token required",
       });
     }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Check if user still exists
@@ -25,7 +26,7 @@ export const authenticateToken = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error("Auth middleware error:", error);
+    logger.error("Auth middleware error:", error);
 
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
