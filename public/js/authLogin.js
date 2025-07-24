@@ -4,12 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const btnText = loginBtn.querySelector(".btn-text");
   const btnLoader = loginBtn.querySelector(".btn-loader");
 
-  // Check If user logged in (TEMPORARY CHECK UNTIL DEPLOY STAGE)
-  const token = localStorage.getItem("token");
-  if (token) {
-    window.location.href = "/dashboard";
-    return;
-  }
+  checkIfLoggedIn();
 
   document.querySelectorAll(".toggle-password").forEach((element) => {
     togglePassword(element);
@@ -38,6 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     try {
       const response = await fetch("/auth/login", {
         method: "POST",
+        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
         },
@@ -50,7 +46,6 @@ document.addEventListener("DOMContentLoaded", function () {
         showAlert("Login successfully! Redirecting...", "success");
 
         // Store in localStorage for development
-        localStorage.setItem("token", result.token);
         localStorage.setItem("user", JSON.stringify(result.user));
 
         // Redirect after short delay
@@ -97,6 +92,34 @@ document.addEventListener("DOMContentLoaded", function () {
     return errors;
   }
 });
+
+async function checkIfLoggedIn() {
+  try {
+    const response = await fetch("/auth/me", {
+      credentials: "include", // Send cookies
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        // User is already logged in, redirect
+        console.log("User already logged in, redirecting to dashboard");
+        window.location.href = "/dashboard";
+        return;
+      }
+    }
+
+    // Handle 401 (not logged in) - this is expected
+    if (response.status === 401) {
+      console.log("User not authenticated - this is expected on Login page");
+      return; // Continue with signup page
+    }
+
+    // Handle other errors
+    console.log("Auth check failed with status:", response.status);
+  } catch (error) {
+    console.log("User not authenticated");
+  }
+}
 
 // Utility functions
 function showAlert(message, type = "info") {
