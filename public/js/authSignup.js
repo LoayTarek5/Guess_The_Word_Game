@@ -158,7 +158,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Helper functions
   function setButtonLoading(loading) {
     signupBtn.disabled = loading;
     if (loading) {

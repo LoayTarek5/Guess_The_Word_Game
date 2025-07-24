@@ -121,7 +121,6 @@ async function checkIfLoggedIn() {
   }
 }
 
-// Utility functions
 function showAlert(message, type = "info") {
   const alertDiv = document.getElementById("alert");
   if (alertDiv) {
