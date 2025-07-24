@@ -59,7 +59,6 @@ export const validateLogin = [
     .isLength({ max: 100 })
     .withMessage('Password too long'),
   
-  // Handle validation errors
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
