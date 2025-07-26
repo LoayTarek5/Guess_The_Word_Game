@@ -55,8 +55,6 @@ app.use(
   })
 );
 
-
-
 // CORS - environment based
 app.use(cors({
   origin: process.env.CLIENT_URL,
@@ -70,7 +68,7 @@ app.use(compression());
 // Rate limiting - more lenient in development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit in dev
+  max: process.env.NODE_ENV === 'production' ? 100 : 10000, // Higher limit in dev
   message: {
     success: false,
     message: 'Too many requests, please try again later.'
@@ -79,7 +77,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 5 : 50, // Higher limit in dev
+  max: process.env.NODE_ENV === 'production' ? 5 : 10000, // Higher limit in dev
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again later.'
