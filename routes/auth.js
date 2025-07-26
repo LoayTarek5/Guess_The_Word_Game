@@ -9,12 +9,10 @@ import { redirectIfAuthenticated } from "../middleware/routeGuards.js";
 const router = express.Router();
 
 
-// Show login page
 router.get("/login", redirectIfAuthenticated, (req, res) => {
   res.render("auth/login", { title: "Login", error: null });
 });
 
-// Show signup page
 router.get("/signup", redirectIfAuthenticated, (req, res) => {
   res.render("auth/signup", { title: "Sign Up", error: null });
 });
