@@ -41,7 +41,7 @@ userSchema.methods.comparePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-userSchema.method.invalidateAllTokens = async function () {
+userSchema.methods.invalidateAllTokens = async function () {
   this.tokenInvalidatedAt = new Date();
   await this.save();
 };
