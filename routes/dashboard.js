@@ -1,8 +1,10 @@
-import express from 'express'
-const router = express.Router()
+import express from "express";
+import { requireAuth } from '../middleware/routeGuards.js';
 
-router.get('/', (req, res) => {
-  res.render('dashboard')
-})
+const router = express.Router();
+
+router.get("/", requireAuth, (req, res) => {
+  res.render("dashboard");
+});
 
 export default router;
