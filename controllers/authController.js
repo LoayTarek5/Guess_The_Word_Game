@@ -3,9 +3,16 @@ import User from "../models/User.js";
 import logger from "../utils/logger.js";
 class AuthController {
   generateToken(userId) {
-    return jwt.sign({ userId }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-    });
+    return jwt.sign(
+      {
+        userId,
+        // issuedAt: new Date().getTime(),
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+      }
+    );
   }
   // Format user response
   formatUserResponse(user) {
@@ -53,10 +60,13 @@ class AuthController {
         });
       }
       const newUser = new User({ username, email, password });
+      // Update last seen
+      newUser.lastSeen = new Date();
+      newUser.status = "online";
       await newUser.save();
 
       const token = this.generateToken(newUser._id);
-      res.cookie("token", token, {
+      res.cookie("authToken", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production", // HTTPS only in production
         sameSite: "strict",
@@ -122,13 +132,12 @@ class AuthController {
       await user.save();
 
       const token = this.generateToken(user._id);
-      res.cookie("token", token, {
+      res.cookie("authToken", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
-
 
       logger.info(`User logged in: ${user.username}`);
       res.json({
@@ -147,19 +156,38 @@ class AuthController {
 
   async logout(req, res) {
     try {
-      // Update user status to offline
-      await User.findByIdAndUpdate(req.user.userId, {
-        status: "offline",
-        lastSeen: new Date(),
+      const user = await User.findById(req.user.userId);
+
+      if (user) {
+        // Invalidate ALL tokens by updating the timestamp
+        await user.invalidateAllTokens();
+
+        // Update user status
+        user.status = "offline";
+        user.lastSeen = new Date();
+        await user.save();
+
+        logger.info(
+          `Global logout for user: ${user.username} - all sessions invalidated`
+        );
+      }
+      // res.clearCookie("authToken");
+      res.clearCookie("authToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
       });
-      res.clearCookie("token");
-       logger.info(`User logged out: ${req.user.userId}`);
       res.json({
         success: true,
         message: "Logged out successfully",
       });
     } catch (error) {
-       logger.error("Logout error:", error);
+      logger.error("Logout error:", error);
+      res.clearCookie("authToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict"
+      });
       res.status(500).json({
         success: false,
         message: "Something went wrong",
@@ -182,9 +210,8 @@ class AuthController {
         success: true,
         user: this.formatUserResponse(user),
       });
-      
     } catch (error) {
-       logger.error("Get profile error:", error);
+      logger.error("Get profile error:", error);
       res.status(500).json({
         success: false,
         message: "Something went wrong",
