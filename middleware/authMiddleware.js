@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import logger from "../utils/logger.js";
 
 export const authenticateToken = async (req, res, next) => {
   try {
@@ -21,6 +22,20 @@ export const authenticateToken = async (req, res, next) => {
         success: false,
         message: "User no longer exists",
       });
+    }
+
+    // CHECK if token was issued before global logout
+    if (user.tokenInvalidatedAt && decoded.iat) {
+      const tokenIssuedAt = decoded.iat * 1000; // Convert to milliseconds
+      const invalidatedAt = user.tokenInvalidatedAt.getTime();
+
+      if (invalidatedAt > tokenIssuedAt) {
+        logger.info(`Token invalidated for user: ${user.username}`);
+        return res.status(401).json({
+          success: false,
+          message: "Session expired due to logout from another device",
+        });
+      }
     }
 
     req.user = decoded;
