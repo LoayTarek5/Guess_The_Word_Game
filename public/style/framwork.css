@@ -4,11 +4,12 @@
   box-sizing: border-box;
 }
 :root {
-  --main-color: #18181b;
+  --main-txt-color: #09090b;
+  --txt-color: #71717a;
   --main-color-alt: #3f3f46;
-  --section-background: #71717a;
-  --btn-color: #09090b;
-  --purple-color: #4f46e5;
+  --btn-color: #18181b;
+  --icon-color: #4f46e5;
+  --background-color: #e0e7ff;
   --main-transition: 0.3s;
   --main-padding-top: 100px;
   --main-padding-bottom: 100px;
@@ -52,10 +53,3 @@ ul {
   }
 }
 
-/* .container h1 {
-  padding-left: 15px;
-  padding-right: 15px;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center;
-} */
