@@ -1,0 +1,229 @@
+.dashboard-layout {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+aside#sidebar {
+  transform: translateX(0);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  border-right: solid 1px #8080804d;
+  padding: 20px;
+  width: 250px;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+  position: relative;
+}
+aside#sidebar.active {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+header.sidebar-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+header.sidebar-header i {
+  color: var(--icon-color);
+  background-color: var(--background-color);
+  padding: 10px;
+  border-radius: 6px;
+  margin-right: 10px;
+}
+header.sidebar-header .game-title h4 {
+  color: var(--main-color-alt);
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+header.sidebar-header .game-title p {
+  margin: 5px 0 0 0;
+  color: var(--txt-color);
+  font-size: 12px;
+}
+
+#sidebar-nav {
+  margin-top: 30px;
+}
+#sidebar-nav p:first-of-type {
+  color: var(--txt-color);
+  font-size: 12px;
+}
+.nav-list .nav-item {
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+.nav-list .nav-item a {
+  display: flex;
+  align-items: center;
+  color: var(--txt-color);
+  transition: 0.3s;
+}
+.nav-list .nav-item a.active {
+  color: var(--btn-color);
+}
+.nav-list .nav-item a:hover {
+  color: var(--btn-color);
+}
+.nav-list .nav-item a i {
+  flex: 0.3;
+}
+.nav-list .nav-item a span {
+  flex: 1;
+}
+
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  position: relative;
+}
+.sidebar-footer .user-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-footer .user-footer .username-display {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-footer .user-footer #username {
+  font-size: 13px;
+}
+.sidebar-footer .user-footer .footer-avatar {
+  display: block;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background-color: aquamarine;
+}
+.sidebar-footer .user-footer .footer-lvl {
+  font-size: 10px;
+  color: var(--txt-color);
+}
+.sidebar-footer .logout-btn {
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  color: #ef4444;
+}
+.logout-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.main-content {
+  flex: 1;
+  transition: margin-left 0.3s ease;
+  position: relative;
+  padding: 15px;
+}
+aside#sidebar.active ~ .main-content {
+  margin-left: -246px;
+}
+
+.dashboard-sidebar {
+  position: relative;
+  color: var(--main-color-alt);
+}
+.dashboard-sidebar::after {
+  content: "";
+  position: absolute;
+  height: 1px;
+  width: 100%;
+  background-color: var(--background-color);
+  bottom: -4px;
+  left: -15px;
+}
+.dashboard-sidebar p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 20px;
+  padding-bottom: 10px;
+}
+.dashboard-sidebar i {
+  font-size: 20px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.welcome-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.welcome-message h1 {
+  color: var(--main-color-alt);
+  margin: 20px 0 10px 0;
+  font-size: 28px;
+}
+.welcome-message p {
+  color: var(--txt-color);
+  margin: 0 0 20px 0;
+}
+.quickplay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background-color: var(--btn-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+.quickplay:hover {
+  background-color: var(--icon-color);
+}
+
+@media (max-width: 768px) {
+  aside#sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    background-color: white;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  }
+  aside#sidebar.active {
+    transform: translateX(0%);
+    opacity: 1;
+  }
+  .main-content {
+    margin-left: 0px;
+  }
+  aside#sidebar.active ~ .main-content {
+    margin-left: 0px;
+  }
+  .dashboard-layout::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  /* Show overlay when sidebar is active */
+  aside#sidebar.active ~ .main-content::before,
+  .dashboard-layout.sidebar-open::before {
+    opacity: 1;
+    visibility: visible;
+  }
+}
