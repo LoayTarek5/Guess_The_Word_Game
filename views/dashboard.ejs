@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Render All Elements Normally -->
+    <link rel="stylesheet" href="/style/normalize.css" />
+    <!-- Font Awesome Library -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- Main Template CSS File -->
+    <link rel="stylesheet" href="/style/framwork.css" />
+    <link rel="stylesheet" href="/style/dashboard.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Guess Word Game</title>
+  </head>
+  <body>
+    <div class="dashboard-layout">
+      <aside id="sidebar">
+        <header class="sidebar-header">
+          <i class="fa-solid fa-gamepad"></i>
+          <div class="game-title">
+            <h4>Word Guess</h4>
+            <p>Game On!</p>
+          </div>
+        </header>
+        <nav id="sidebar-nav" aria-label="Main">
+          <p>Navigation</p>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a href="/dashboard" class="active">
+                <i class="fas fa-home" aria-hidden="true"></i>
+                <span>Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/game/lobby">
+                <i class="fas fa-users" aria-hidden="true"></i>
+
+                <span>Game Lobby</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/game/play">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span>Play Game</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/friends">
+                <i class="fas fa-user-friends" aria-hidden="true"></i>
+                <span>Friends</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/history">
+                <i class="fas fa-history" aria-hidden="true"></i>
+                <span>Match History</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="/settings">
+                <i class="fas fa-cog" aria-hidden="true"></i>
+                <span>Settings</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <footer class="sidebar-footer">
+          <div class="user-footer">
+            <span class="footer-avatar"></span>
+            <p class="username-display">
+              <span class="username">Loading...</span>
+              <span class="footer-lvl"
+                >level <span class="level-no">15</span></span
+              >
+            </p>
+          </div>
+          <button id="logout-btn" class="logout-btn">
+            <span class="btn-text">logout</span>
+            <i class="fa-solid fa-sign-out-alt"></i>
+            <span class="btn-loader" style="display: none">
+              <i class="fas fa-spinner fa-spin"></i>
+            </span>
+          </button>
+        </footer>
+      </aside>
+      <main class="main-content">
+        <header class="dashboard-sidebar">
+          <p>
+            <i class="fa-solid fa-sliders dashboard-btn"></i>
+            Dashboard
+          </p>
+        </header>
+        <div class="main-section">
+          <section class="welcome-section">
+            <div class="welcome-message">
+              <h1>Welcome back, <span class="username">Loading...</span>!</h1>
+              <p>Ready for another word challenge?</p>
+            </div>
+            <button class="quickplay">
+              <i class="fa-solid fa-gamepad"></i>
+              <span>Quick Play</span>
+            </button>
+          </section>
+          <section class="state-cards">
+            <div class="state-group">
+              <div class="state-content">
+                <div class="state-info">
+                  <h3>Total Games</h3>
+                  <p>47</p>
+                  <span></span>
+                </div>
+                <i class="fa-solid fa-gamepad"></i>
+              </div>
+            </div>
+            <div class="state-group">
+              <div class="state-content">
+                <div class="state-info">
+                  <h3>Win Rate</h3>
+                  <p>68%</p>
+                  <span>32W - 15L</span>
+                </div>
+                <i class="fa-solid fa-trophy"></i>
+              </div>
+            </div>
+            <div class="state-group">
+              <div class="state-content">
+                <div class="state-info">
+                  <h3>Current Streak</h3>
+                  <p>5</p>
+                  <span>wins in a row</span>
+                </div>
+                <i class="fa-solid fa-arrow-trend-up"></i>
+              </div>
+            </div>
+            <div class="state-group">
+              <div class="state-content">
+                <div class="state-info">
+                  <h3>Friends Online</h3>
+                  <p>8</p>
+                  <span>of 23 friends</span>
+                </div>
+                <i class="fa-solid fa-user-group"></i>
+              </div>
+            </div>
+          </section>
+          <div class="content-grid">
+            <section class="performance-section">
+              <h3>Performance Overview</h3>
+              <p class="section-subtitle">
+                Your wins and losses over the last 6 months
+              </p>
+              <div class="chart-container">
+                <canvas id="performance-chart"></canvas>
+              </div>
+            </section>
+            <section class="friends-section">
+              <div class="header-friend">
+                <h3>Friends</h3>
+                <button class="add-friend-btn">
+                  <i class="fa-solid fa-user-plus"></i>
+                  Add Friend
+                </button>
+              </div>
+              <div class="friend-content">
+                <div class="friend-group">
+                  <div class="friend-data">
+                    <span class="friend-avatar"></span>
+                    <div class="friend-info">
+                      <p class="friend-name">Alex</p>
+                      <span class="status">Level 12 • Online</span>
+                    </div>
+                  </div>
+                  <div class="friend-icons">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <i class="fa-regular fa-message"></i>
+                  </div>
+                </div>
+                <div class="friend-group">
+                  <div class="friend-data">
+                    <span class="friend-avatar"></span>
+                    <div class="friend-info">
+                      <p class="friend-name">Alex</p>
+                      <span class="status">Level 12 • Online</span>
+                    </div>
+                  </div>
+                  <div class="friend-icons">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <i class="fa-regular fa-message"></i>
+                  </div>
+                </div>
+                <div class="friend-group">
+                  <div class="friend-data">
+                    <span class="friend-avatar"></span>
+                    <div class="friend-info">
+                      <p class="friend-name">Alex</p>
+                      <span class="status">Level 12 • Online</span>
+                    </div>
+                  </div>
+                  <div class="friend-icons">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <i class="fa-regular fa-message"></i>
+                  </div>
+                </div>
+                <div class="friend-group">
+                  <div class="friend-data">
+                    <span class="friend-avatar"></span>
+                    <div class="friend-info">
+                      <p class="friend-name">Alex</p>
+                      <span class="status">Level 12 • Online</span>
+                    </div>
+                  </div>
+                  <div class="friend-icons">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <i class="fa-regular fa-message"></i>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          <section class="matches-section">
+            <h3>Recent Matches</h3>
+            <div class="matches-content">
+              <div class="match-data">
+                <div class="match-info">
+                  <span class="avatar"></span>
+                  <div class="info">
+                    <p class="name">vs Alex</p>
+                    <span class="time">2 hours ago</span>
+                  </div>
+                </div>
+                <div class="match-stats">
+                  <div class="match-result">
+                    <span class="you">3</span>-<span class="opp">1</span>
+                  </div>
+                  <div class="match-status won">
+                    <i class="fa-solid fa-trophy"></i>
+                    Won
+                  </div>
+                </div>
+              </div>
+              <div class="match-data">
+                <div class="match-info">
+                  <span class="avatar"></span>
+                  <div class="info">
+                    <p class="name">vs Sarah</p>
+                    <span class="time">1 day ago</span>
+                  </div>
+                </div>
+                <div class="match-stats">
+                  <div class="match-result">
+                    <span class="you">1</span>-<span class="opp">3</span>
+                  </div>
+                  <div class="match-status lost">
+                    <i class="fa-solid fa-xmark"></i>
+                    Lost
+                  </div>
+                </div>
+              </div>
+              <div class="match-data">
+                <div class="match-info">
+                  <span class="avatar"></span>
+                  <div class="info">
+                    <p class="name">vs Mike</p>
+                    <span class="time">2 days ago</span>
+                  </div>
+                </div>
+                <div class="match-stats">
+                  <div class="match-result">
+                    <span class="you">4</span>-<span class="opp">4</span>
+                  </div>
+                  <div class="match-status draw">
+                    <i class="fa-solid fa-handshake"></i>
+                    Draw
+                  </div>
+                </div>
+              </div>
+              <div class="match-data">
+                <div class="match-info">
+                  <span class="avatar"></span>
+                  <div class="info">
+                    <p class="name">vs Alex</p>
+                    <span class="time">2 hours ago</span>
+                  </div>
+                </div>
+                <div class="match-stats">
+                  <div class="match-result">
+                    <span class="you">3</span>-<span class="opp">1</span>
+                  </div>
+                  <div class="match-status won">
+                    <i class="fa-solid fa-trophy"></i>
+                    Won
+                  </div>
+                </div>
+              </div>
+              <div class="match-data">
+                <div class="match-info">
+                  <span class="avatar"></span>
+                  <div class="info">
+                    <p class="name">vs Alex</p>
+                    <span class="time">2 hours ago</span>
+                  </div>
+                </div>
+                <div class="match-stats">
+                  <div class="match-result">
+                    <span class="you">3</span>-<span class="opp">1</span>
+                  </div>
+                  <div class="match-status won">
+                    <i class="fa-solid fa-trophy"></i>
+                    Won
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/js/dashboard.js"></script>
+  </body>
+</html>
