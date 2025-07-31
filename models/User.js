@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    avatar: { type: String, default: "../public/images/user-solid.svg" },
+    avatar: { type: String, default: "/images/user-solid.svg" },
     status: {
       type: String,
       enum: ["online", "offline", "in match"],
