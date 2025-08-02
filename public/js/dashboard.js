@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Setup logout functionality
   setupLogoutButton();
 
+  initializePerformanceChart();
+
   startPeriodicAuthCheck();
 });
 
@@ -62,6 +64,7 @@ function loadUserDataFromStorage() {
 
     if (user.username) {
       displayUserData(user, "localStorage");
+      displayUserStats(user.stats);
     } else {
       document.getElementById("username").textContent = "Guest";
     }
@@ -71,7 +74,7 @@ function loadUserDataFromStorage() {
   }
 }
 
-//  Production-ready server data fetch
+// server data fetch
 async function fetchUserDataFromServer() {
   try {
     const response = await fetch("/auth/me", {
@@ -119,10 +122,48 @@ async function fetchUserDataFromServer() {
   }
 }
 
+function displayUserData(user, source) {
+  const usernameElements = document.querySelectorAll(".username");
+  usernameElements.forEach((usernameElement) => {
+    const currentUsername = usernameElement.textContent;
+
+    if (currentUsername !== user.username && currentUsername !== "Loading...") {
+      // Animate username change
+      usernameElement.style.transform = "scale(1.1)";
+      usernameElement.style.color = "#28a745";
+
+      setTimeout(() => {
+        usernameElement.textContent = user.username;
+        setTimeout(() => {
+          usernameElement.style.transform = "scale(1)";
+          usernameElement.style.color = "#667eea";
+        }, 200);
+      }, 100);
+    } else {
+      usernameElement.textContent = user.username;
+    }
+  });
+}
+
+function displayUserStats(stats) {
+  const totalGames = document.getElementById("total-games");
+  const winRate = document.getElementById("win-rate");
+  const numWinLose = document.getElementById("win-lose");
+  const streak = document.getElementById("streak");
+  const lvlNum = document.querySelector(".level-no");
+  let rate = stats.totalGames == 0 ? 0 : (stats.gamesWon / stats.totalGames) * 100;
+  totalGames.textContent = `${stats.totalGames}`;
+  winRate.textContent = `${rate.toFixed(1)}%`;
+  numWinLose.textContent = `${stats.gamesWon}W - ${stats.gamesLost}L - ${stats.gamesDraw}D`;
+  streak.textContent = `${stats.winStreak}`;
+  lvlNum.textContent = `${stats.level}`;
+}
+
 // periodic authentication check (every 30 seconds)
 function startPeriodicAuthCheck() {
   setInterval(async () => {
-    if (!document.hidden) { // Only check if tab is active
+    if (!document.hidden) {
+      // Only check if tab is active
       try {
         const response = await fetch("/auth/me", {
           credentials: "include",
@@ -130,9 +171,12 @@ function startPeriodicAuthCheck() {
 
         if (response.status === 401) {
           const result = await response.json();
-          
+
           if (result.message.includes("logout from another device")) {
-            showNotification("You have been logged out from another device", "warning");
+            showNotification(
+              "You have been logged out from another device",
+              "warning"
+            );
             setTimeout(() => {
               localStorage.removeItem("user");
               window.location.href = "/auth/login";
@@ -147,27 +191,6 @@ function startPeriodicAuthCheck() {
   }, 30000); // Check every 30 seconds
 }
 
-function displayUserData(user, source) {
-  const usernameElement = document.getElementById("username");
-  const currentUsername = usernameElement.textContent;
-
-  if (currentUsername !== user.username && currentUsername !== "Loading...") {
-    // Animate username change
-    usernameElement.style.transform = "scale(1.1)";
-    usernameElement.style.color = "#28a745";
-
-    setTimeout(() => {
-      usernameElement.textContent = user.username;
-      setTimeout(() => {
-        usernameElement.style.transform = "scale(1)";
-        usernameElement.style.color = "#667eea";
-      }, 200);
-    }, 100);
-  } else {
-    usernameElement.textContent = user.username;
-  }
-}
-
 // logout function
 function setupLogoutButton() {
   const logoutBtn = document.getElementById("logout-btn");
@@ -178,7 +201,6 @@ function setupLogoutButton() {
     if (confirm("Are you sure you want to logout?")) {
       try {
         setLogoutButtonLoading(true);
-
         // Call server logout with cookies
         try {
           await fetch("/auth/logout", {
@@ -204,7 +226,7 @@ function setupLogoutButton() {
         // Even if server logout fails, clear local data
         localStorage.removeItem("user");
         showNotification("Logged out locally (network error)", "warning");
-        
+
         setTimeout(() => {
           window.location.href = "/auth/login";
         }, 1000);
@@ -300,6 +322,84 @@ function showNotification(message, type = "info") {
   }, 4000);
 }
 
+function initializePerformanceChart() {
+  const ctx = document.getElementById("performance-chart");
+  if (!ctx) return;
+
+  // Mock performance data
+  const performanceData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+      {
+        label: "Wins",
+        data: [12, 15, 18, 22, 16, 20],
+        backgroundColor: "#10b981",
+        borderColor: "#10b981",
+        borderWidth: 2,
+        borderRadius: 4,
+        borderSkipped: false,
+      },
+      {
+        label: "Losses",
+        data: [8, 5, 6, 3, 9, 4],
+        backgroundColor: "#ef4444",
+        borderColor: "#ef4444",
+        borderWidth: 2,
+        borderRadius: 4,
+        borderSkipped: false,
+      },
+    ],
+  };
+
+  new Chart(ctx, {
+    type: "bar",
+    data: performanceData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: "#333",
+          titleColor: "#fff",
+          bodyColor: "#fff",
+          borderColor: "#666",
+          borderWidth: 1,
+          cornerRadius: 8,
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          border: {
+            display: false,
+          },
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: "#f0f0f0",
+          },
+          border: {
+            display: false,
+          },
+          ticks: {
+            stepSize: 6,
+          },
+        },
+      },
+      interaction: {
+        intersect: false,
+        mode: "index",
+      },
+    },
+  });
+}
+
 // Production-ready network status handling
 window.addEventListener("online", () => {
   console.log("Connection restored, refreshing data...");
@@ -328,3 +428,37 @@ window.addEventListener("popstate", () => {
   }
 });
 
+document.querySelector(".dashboard-btn").addEventListener("click", () => {
+  const sidebar = document.getElementById("sidebar");
+  const mainContent = document.querySelector(".main-content");
+  const dashboardLayout = document.querySelector(".dashboard-layout");
+
+  // Toggle the active class
+  sidebar.classList.toggle("active");
+
+  // Add class to dashboard layout for overlay on mobile
+  dashboardLayout.classList.toggle("sidebar-open");
+
+  // Optional: Add a class to main content for additional styling
+  mainContent.classList.toggle("sidebar-hidden");
+});
+
+// Close sidebar when clicking on overlay (mobile only)
+document.addEventListener("click", (e) => {
+  const sidebar = document.getElementById("sidebar");
+  const dashboardBtn = document.querySelector(".dashboard-btn");
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile && sidebar.classList.contains("active")) {
+    // If clicking outside sidebar and not on the toggle button
+    if (!sidebar.contains(e.target) && !dashboardBtn.contains(e.target)) {
+      sidebar.classList.remove("active");
+      document
+        .querySelector(".dashboard-layout")
+        .classList.remove("sidebar-open");
+      document
+        .querySelector(".main-content")
+        .classList.remove("sidebar-hidden");
+    }
+  }
+});
