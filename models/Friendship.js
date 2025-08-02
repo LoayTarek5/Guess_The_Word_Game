@@ -38,13 +38,13 @@ friendshipSchema.statics.getFriends = async function (userId) {
   }).populate("requester recipient", "username avatar status lastSeen stats");
 };
 
-friendshipSchema.statics.getFriends = async function (userId) {
-  return await this.find({
+friendshipSchema.statics.countFriends = async function (userId) {
+  return await this.countDocuments({
     $or: [
-      { requester: userId, status: "accepted" },
-      { recipient: userId, status: "accepted" },
-    ],
-  }).populate("requester recipient", "username avatar status lastSeen stats");
+      { requester: userId, status: 'accepted' },
+      { recipient: userId, status: 'accepted' }
+    ]
+  });
 };
 
 friendshipSchema.statics.getPendingRequests = async function (userId) {
