@@ -75,7 +75,7 @@ header.sidebar-header .game-title p {
   color: var(--btn-color);
 }
 .nav-list .nav-item a i {
-  flex: 0.3;
+  flex: 0.15;
 }
 .nav-list .nav-item a span {
   flex: 1;
