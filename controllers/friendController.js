@@ -21,7 +21,7 @@ class FriendController {
           status: friend.status,
           level: friend.stats?.level || 1,
           lastSeen: friend.lastSeen,
-          isOnline: this.isUserOnline(friend.lastSeen, friend.status),
+          isOnline: Friendship.isUserOnline(friend.lastSeen, friend.status),
         };
       });
 
@@ -78,7 +78,7 @@ class FriendController {
         });
       }
 
-      const existingFriendship = Friendship.findOne({
+      const existingFriendship = await Friendship.findOne({
         $or: [
           { requester: userId, recipient: recipient._id },
           { requester: recipient._id, recipient: userId },
@@ -137,10 +137,10 @@ class FriendController {
 
   async acceptFriendRequest(req, res) {
     try {
-      const requestId = req.params;
-      const userId = req.user.username;
+      const { requestId } = req.params;
+      const userId = req.user.userId;
 
-      const friendship = Friendship.findOne({
+      const friendship = await Friendship.findOne({
         _id: requestId,
         recipient: userId,
         status: "pending",
@@ -152,7 +152,8 @@ class FriendController {
           message: "Friend request not found",
         });
       }
-      friendship.status = "accept";
+
+      friendship.status = "accepted";
       await friendship.save();
 
       logger.info(
@@ -172,13 +173,12 @@ class FriendController {
     }
   }
 
-  // Decline friend request
   async declineFriendRequest(req, res) {
     try {
-      const requestId = req.params;
-      const userId = req.user.username;
+      const { requestId } = req.params;
+      const userId = req.user.userId;
 
-      const friendship = Friendship.findOne({
+      const friendship = await Friendship.findOne({
         _id: requestId,
         recipient: userId,
         status: "pending",
@@ -190,6 +190,7 @@ class FriendController {
           message: "Friend request not found",
         });
       }
+
       friendship.status = "declined";
       await friendship.save();
 
@@ -202,10 +203,10 @@ class FriendController {
         message: "Friend request declined",
       });
     } catch (error) {
-      logger.error("declined friend request error:", error);
+      logger.error("Decline friend request error:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to declined friend request",
+        message: "Failed to decline friend request",
       });
     }
   }
@@ -250,7 +251,7 @@ class FriendController {
     }
   }
 
-   // Remove friend
+  // Remove friend
   async removeFriend(req, res) {
     try {
       const { friendId } = req.params;
@@ -259,15 +260,15 @@ class FriendController {
       const friendship = await Friendship.findOne({
         $or: [
           { requester: userId, recipient: friendId },
-          { requester: friendId, recipient: userId }
+          { requester: friendId, recipient: userId },
         ],
-        status: 'accepted'
+        status: "accepted",
       });
 
       if (!friendship) {
         return res.status(404).json({
           success: false,
-          message: 'Friendship not found'
+          message: "Friendship not found",
         });
       }
 
@@ -275,26 +276,15 @@ class FriendController {
 
       res.json({
         success: true,
-        message: 'Friend removed successfully'
+        message: "Friend removed successfully",
       });
     } catch (error) {
-      logger.error('Remove friend error:', error);
+      logger.error("Remove friend error:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to remove friend'
+        message: "Failed to remove friend",
       });
     }
-  }
-
-  // Helper method to check if user is online
-  isUserOnline(lastSeen, status) {
-    if (status === 'online' || status === 'in match') {
-      return true;
-    }
-    
-    // Consider online if last seen within 5 minutes
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return new Date(lastSeen) > fiveMinutesAgo;
   }
 }
 
