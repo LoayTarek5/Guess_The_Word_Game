@@ -11,10 +11,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Setup logout functionality
   setupLogoutButton();
-
+  loadFriendsData();
   initializePerformanceChart();
 
   startPeriodicAuthCheck();
+
+  setupAdditionalEventListeners();
 });
 
 async function checkAuthentication() {
@@ -151,12 +153,13 @@ function displayUserStats(stats) {
   const numWinLose = document.getElementById("win-lose");
   const streak = document.getElementById("streak");
   const lvlNum = document.querySelector(".level-no");
-  let rate = stats.totalGames == 0 ? 0 : (stats.gamesWon / stats.totalGames) * 100;
-  totalGames.textContent = `${stats.totalGames}`;
+  let rate =
+    stats.totalGames == 0 ? 0 : (stats.gamesWon / stats.totalGames) * 100;
+  totalGames.textContent = stats.totalGames;
   winRate.textContent = `${rate.toFixed(1)}%`;
   numWinLose.textContent = `${stats.gamesWon}W - ${stats.gamesLost}L - ${stats.gamesDraw}D`;
-  streak.textContent = `${stats.winStreak}`;
-  lvlNum.textContent = `${stats.level}`;
+  streak.textContent = stats.winStreak;
+  lvlNum.textContent = stats.level;
 }
 
 // periodic authentication check (every 30 seconds)
@@ -189,6 +192,138 @@ function startPeriodicAuthCheck() {
       }
     }
   }, 30000); // Check every 30 seconds
+}
+
+async function addNewFriend() {
+  const username = prompt("Enter username to add as friend:");
+  if (!username || username.trim() === "") return;
+
+  try {
+    const response = await fetch("/api/friends/request", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ username: username.trim() }),
+    });
+    const result = await response.json();
+    if (result.success) {
+      showNotification(result.message, "success");
+    } else {
+      showNotification(result.message, "error");
+    }
+  } catch (error) {
+    console.error("Error sending friend request:", error);
+    showNotification("Failed to send friend request", "error");
+  }
+}
+
+async function loadFriendsData() {
+  const friendsContainer = document.querySelector(".friend-content");
+
+  try {
+    const response = await fetch("/api/friends", {
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+
+      if (result.success) {
+        const friends = result.friends;
+
+        // Update friends count in stats (assuming you have these elements)
+        const friendsOnlineElements = document.querySelectorAll(
+          ".state-group .state-info p"
+        );
+        if (friendsOnlineElements.length >= 4) {
+          friendsOnlineElements[3].textContent = result.count.online;
+        }
+
+        const friendsTotalSpan = document.querySelectorAll(
+          ".state-group .state-info span"
+        );
+        if (friendsTotalSpan[3]) {
+          friendsTotalSpan[3].textContent = `of ${result.count.total} friends`;
+        }
+
+        // Display friends
+        if (friendsContainer) {
+          if (friends.length === 0) {
+            friendsContainer.innerHTML = `
+              <div style="text-align: center; padding: 20px; color: #999;">
+                <i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                <p>No friends yet</p>
+                <p style="font-size: 12px;">Add some friends to get started!</p>
+              </div>
+            `;
+          } else {
+            friendsContainer.innerHTML = friends
+              .map(
+                (friend) => `
+              <div class="friend-group">
+                <div class="friend-data">
+                  <span class="friend-avatar">
+                    ${
+                      friend.avatar
+                        ? `<i 
+                        class="fa-solid fa-user" 
+                        style="
+                        width: 100%; 
+                        height: 100%; 
+                        object-fit: cover; 
+                        border-radius: 50%; 
+                        overflow:hidden; 
+                        display: flex; 
+                        justify-content:center; 
+                        align-items: center; 
+                        font-size: 25px;
+                        ">
+                        </i>`
+                        : friend.username.charAt(0).toUpperCase()
+                    }
+                  </span>
+                  <div class="friend-info">
+                    <p class="friend-name">${friend.username}</p>
+                    <span class="status">Level ${friend.level} • ${
+                  friend.isOnline ? "Online" : "Offline"
+                }</span>
+                  </div>
+                </div>
+                <div class="friend-icons">
+                  ${
+                    friend.isOnline
+                      ? '<i class="fa-solid fa-gamepad" title="Invite to game"></i>'
+                      : ""
+                  }
+                  <i class="fa-regular fa-message" title="Send message"></i>
+                  <i class="fa-solid fa-user-minus" title="Remove friend" onclick="removeFriend('${
+                    friend.id
+                  }', '${
+                  friend.username
+                }')" style="cursor: pointer; color: #dc3545;"></i>
+                </div>
+              </div>
+            `
+              )
+              .join("");
+          }
+        }
+      }
+    } else {
+      if (friendsContainer) {
+        friendsContainer.innerHTML =
+          '<div style="padding: 20px; text-align: center; color: #999;">Failed to load friends</div>';
+      }
+    }
+  } catch (error) {
+    console.error("Error loading friends:", error);
+    if (friendsContainer) {
+      friendsContainer.innerHTML =
+        '<div style="padding: 20px; text-align: center; color: #999;">Error loading friends</div>';
+    }
+  }
 }
 
 // logout function
@@ -400,6 +535,28 @@ function initializePerformanceChart() {
   });
 }
 
+// Auto-refresh functionality
+function startAutoRefresh() {
+  // Refresh friends data every 2 minutes
+  setInterval(() => {
+    if (!document.hidden) {
+      console.log("Auto-refreshing friends data...");
+      loadFriendsData();
+    }
+  }, 2 * 60 * 1000); // 2 minutes
+
+  // Refresh user data every 5 minutes
+  setInterval(() => {
+    if (!document.hidden) {
+      console.log("Auto-refreshing user data...");
+      fetchUserDataFromServer();
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
+// Start auto-refresh
+startAutoRefresh();
+
 // Production-ready network status handling
 window.addEventListener("online", () => {
   console.log("Connection restored, refreshing data...");
@@ -462,3 +619,8 @@ document.addEventListener("click", (e) => {
     }
   }
 });
+
+function setupAdditionalEventListeners() {
+  const addFriendBtn = document.querySelector(".add-friend-btn");
+  addFriendBtn.addEventListener("click", addNewFriend);
+}
