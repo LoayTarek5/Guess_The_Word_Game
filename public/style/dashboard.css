@@ -484,8 +484,8 @@ aside#sidebar.active ~ .main-content {
 .friend-name {
   font-size: 15px;
   font-weight: 500;
-  color: #212529;
   margin: 0px;
+  color: #212529;
 }
 .status {
   font-size: 12px;
