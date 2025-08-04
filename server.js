@@ -8,6 +8,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import friendRoutes from "./routes/friends.js";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
@@ -15,6 +16,7 @@ import rateLimit from "express-rate-limit";
 import compression from "compression";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 import logger from "./utils/logger.js";
+import User from "./models/User.js";
 const PORT = process.env.PORT;
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -39,7 +41,7 @@ app.use(
           "'self'",
           "https://cdnjs.cloudflare.com",
           "https://fonts.googleapis.com",
-          "https://cdn.jsdelivr.net"
+          "https://cdn.jsdelivr.net",
         ],
         // images
         imgSrc: ["'self'", "data:", "https:"],
@@ -98,7 +100,7 @@ app.use(express.static(join(__dirname, "public")));
 // Routes
 app.use("/auth", authRoutes);
 app.use("/dashboard", dashboardRoutes);
-
+app.use("/api/friends", friendRoutes);
 // 404 handler
 app.use(notFound);
 
@@ -108,7 +110,26 @@ app.use(errorHandler);
 // setup Mongo database
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    setInterval(async () => {
+      try {
+        const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+        const result = await User.updateMany(
+          {
+            status: "online",
+            lastSeen: { $lt: oneMinuteAgo },
+          },
+          { status: "offline" }
+        );
+        if (result.modifiedCount > 0) {
+          console.log(`Marked ${result.modifiedCount} users as offline`);
+        }
+      } catch (error) {
+        console.log("Cleanup error:", error);
+      }
+    }, 1000);
+  })
   .catch((err) => console.error("❌ MongoDB error:", err));
 
 app.listen(PORT, () => {
