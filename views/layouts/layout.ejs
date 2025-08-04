@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Render All Elements Normally -->
+    <link rel="stylesheet" href="/style/normalize.css" />
+    <!-- Font Awesome Library -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- Main Template CSS File -->
+    <link rel="stylesheet" href="/style/framwork.css" />
+    <link rel="stylesheet" href="/style/dashboard.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Guess Word Game</title>
+  </head>
+  <body>
+    <div class="dashboard-layout">
+      <aside id="sidebar">
+        <header class="sidebar-header">
+          <i class="fa-solid fa-gamepad"></i>
+          <div class="game-title">
+            <h4>Word Guess</h4>
+            <p>Game On!</p>
+          </div>
+        </header>
+        <nav id="sidebar-nav" aria-label="Main">
+          <p>Navigation</p>
+          <ul class="nav-list">
+            <li class="nav-item">
+              <a
+                href="/dashboard"
+                class="<%= typeof page !== 'undefined' && page === 'dashboard' ? 'active' : '' %>"
+              >
+                <i class="fas fa-home" aria-hidden="true"></i>
+                <span>Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                href="/game/lobby"
+                class="<%= typeof page !== 'undefined' && page === 'lobby' ? 'active' : '' %>"
+              >
+                <i class="fas fa-users" aria-hidden="true"></i>
+                <span>Game Lobby</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                href="/game/play"
+                class="<%= typeof page !== 'undefined' && page === 'play' ? 'active' : '' %>"
+              >
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span>Play Game</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                href="api/friends"
+                class="<%= typeof page !== 'undefined' && page === 'friends' ? 'active' : '' %>"
+              >
+                <i class="fas fa-user-friends" aria-hidden="true"></i>
+                <span>Friends</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                href="/history"
+                class="<%= typeof page !== 'undefined' && page === 'history' ? 'active' : '' %>"
+              >
+                <i class="fas fa-history" aria-hidden="true"></i>
+                <span>Match History</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                href="/notifications"
+                class="<%= typeof page !== 'undefined' && page === 'notifications' ? 'active' : '' %>"
+              >
+                <i class="fa-solid fa-bell" aria-hidden="true"></i>
+                <span>Notifications</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                href="/settings"
+                class="<%= typeof page !== 'undefined' && page === 'settings' ? 'active' : '' %>"
+              >
+                <i class="fas fa-cog" aria-hidden="true"></i>
+                <span>Settings</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <footer class="sidebar-footer">
+          <div class="user-footer">
+            <span class="user-avatar"></span>
+            <p class="username-display">
+              <span class="username">Loading...</span>
+              <span class="footer-lvl"
+                >level <span class="level-no">15</span></span
+              >
+            </p>
+          </div>
+          <button id="logout-btn" class="logout-btn">
+            <span class="btn-text">logout</span>
+            <i class="fa-solid fa-sign-out-alt"></i>
+            <span class="btn-loader" style="display: none">
+              <i class="fas fa-spinner fa-spin"></i>
+            </span>
+          </button>
+        </footer>
+      </aside>
+      <main class="main-content">
+        <header class="dashboard-sidebar">
+          <p>
+            <i class="fa-solid fa-sliders dashboard-btn"></i>
+            <%= typeof pageTitle !== 'undefined' ? pageTitle : 'Dashboard' %>
+          </p>
+          <i class="fa-solid fa-bell notifications-bell" aria-hidden="true"
+            ><span class="message-number"></span
+          ></i>
+        </header>
+        <%- body %>
+      </main>
+    </div>
+  </body>
+</html>
