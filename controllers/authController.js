@@ -6,7 +6,6 @@ class AuthController {
     return jwt.sign(
       {
         userId,
-        // issuedAt: new Date().getTime(),
       },
       process.env.JWT_SECRET,
       {
@@ -186,7 +185,7 @@ class AuthController {
       res.clearCookie("authToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict"
+        sameSite: "strict",
       });
       res.status(500).json({
         success: false,
@@ -194,6 +193,50 @@ class AuthController {
       });
     }
   }
+
+  async setOffline(req, res) {
+    try {
+      const token = req.cookies.authToken;
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        await User.findByIdAndUpdate(decoded.userId, {
+          status: "offline",
+          lastSeen: new Date(),
+        });
+        logger.info(`User went offline: ${decoded.userId}`);
+      }
+      res.status(200).json({ success: true });
+    } catch (error) {
+      logger.error("Set offline error:", error);
+      res.status(200).json({ success: true }); // Always return success to avoid client errors
+    }
+  }
+
+  async heartbeat(req, res) {
+    try {
+      const user = await User.findById(req.user.userId);
+
+      if (user) {
+        user.lastSeen = new Date();
+        if (user.status !== "in match") {
+          user.status = "online"; 
+        }
+        await user.save();
+      }
+
+      res.json({
+        success: true,
+        message: "Activity updated",
+      });
+    } catch (error) {
+      logger.error("Heartbeat error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update activity",
+      });
+    }
+  }
+
   // Get current user profile
   async getProfile(req, res) {
     try {
