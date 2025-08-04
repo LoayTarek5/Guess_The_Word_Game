@@ -61,4 +61,14 @@ friendshipSchema.statics.getSentRequests = async function (userId) {
   );
 };
 
+friendshipSchema.statics.isUserOnline = function(lastSeen, status) {
+  if (status === "online" || status === "in match") {
+    return true;
+  }
+
+  /* Consider online if last seen within 5 minutes
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  return new Date(lastSeen) > fiveMinutesAgo;*/
+};
+
 export default mongoose.model("Friendship", friendshipSchema);
