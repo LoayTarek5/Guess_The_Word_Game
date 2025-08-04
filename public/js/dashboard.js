@@ -303,7 +303,7 @@ async function loadFriendsData() {
                 (friend) => `
               <div class="friend-group">
                 <div class="friend-data">
-                  <span class="friend-avatar">
+                  <span class="friend-avatar ${friend.isOnline ? "": "offline"}">
                     ${
                       friend.avatar
                         ? `<i 
