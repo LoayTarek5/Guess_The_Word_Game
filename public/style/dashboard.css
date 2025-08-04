@@ -140,6 +140,9 @@ aside#sidebar.active ~ .main-content {
 .dashboard-sidebar {
   position: relative;
   color: var(--main-color-alt);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .dashboard-sidebar::after {
   content: "";
@@ -161,7 +164,26 @@ aside#sidebar.active ~ .main-content {
   margin-right: 10px;
   cursor: pointer;
 }
-
+.dashboard-sidebar .notifications-bell {
+  position: relative;
+}
+.dashboard-sidebar .notifications-bell .message-number {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: red;
+  font-size: 9px;
+  top: -8px;
+  right: -11px;
+  display: none;
+}
+.dashboard-sidebar .notifications-bell .message-number.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .welcome-section {
   display: flex;
   align-items: center;
