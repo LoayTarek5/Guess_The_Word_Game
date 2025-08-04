@@ -15,8 +15,9 @@ document.addEventListener("DOMContentLoaded", function () {
   initializePerformanceChart();
 
   startPeriodicAuthCheck();
-
+  startAutoRefresh();
   setupAdditionalEventListeners();
+  startHeartbeat();
 });
 
 async function checkAuthentication() {
@@ -219,6 +220,30 @@ async function addNewFriend() {
   }
 }
 
+async function removeFriend(userId, username) {
+  if (
+    !confirm(`Are you sure you want to remove ${username} from your friends?`)
+  ) {
+    return;
+  }
+  try {
+    const response = await fetch(`/api/friends/${userId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const result = await response.json();
+    if (result.success) {
+      showNotification(result.message, "success");
+      loadFriendsData();
+    } else {
+      showNotification(result.message, "error");
+    }
+  } catch (error) {
+    console.error("Error removing friend:", error);
+    showNotification("Failed to remove friend", "error");
+  }
+}
+
 async function loadFriendsData() {
   const friendsContainer = document.querySelector(".friend-content");
 
@@ -298,11 +323,11 @@ async function loadFriendsData() {
                       : ""
                   }
                   <i class="fa-regular fa-message" title="Send message"></i>
-                  <i class="fa-solid fa-user-minus" title="Remove friend" onclick="removeFriend('${
+                  <i class="fa-solid fa-user-minus remove-friend-btn" title="Remove friend" data-user-id="${
                     friend.id
-                  }', '${
+                  }" data-username="${
                   friend.username
-                }')" style="cursor: pointer; color: #dc3545;"></i>
+                }" style="cursor: pointer; color: #dc3545;"></i>
                 </div>
               </div>
             `
@@ -336,6 +361,7 @@ function setupLogoutButton() {
     if (confirm("Are you sure you want to logout?")) {
       try {
         setLogoutButtonLoading(true);
+        stopHeartbeat();
         // Call server logout with cookies
         try {
           await fetch("/auth/logout", {
@@ -537,13 +563,13 @@ function initializePerformanceChart() {
 
 // Auto-refresh functionality
 function startAutoRefresh() {
-  // Refresh friends data every 2 minutes
+  // Refresh friends data every 15 seconds
   setInterval(() => {
     if (!document.hidden) {
       console.log("Auto-refreshing friends data...");
       loadFriendsData();
     }
-  }, 2 * 60 * 1000); // 2 minutes
+  }, 15000);
 
   // Refresh user data every 5 minutes
   setInterval(() => {
@@ -551,11 +577,8 @@ function startAutoRefresh() {
       console.log("Auto-refreshing user data...");
       fetchUserDataFromServer();
     }
-  }, 5 * 60 * 1000); // 5 minutes
+  }, 3 * 60 * 1000); 
 }
-
-// Start auto-refresh
-startAutoRefresh();
 
 // Production-ready network status handling
 window.addEventListener("online", () => {
@@ -575,6 +598,7 @@ document.addEventListener("visibilitychange", () => {
     // User returned to tab, refresh data
     console.log("User returned, refreshing data...");
     fetchUserDataFromServer();
+    loadFriendsData();
   }
 });
 
@@ -620,7 +644,49 @@ document.addEventListener("click", (e) => {
   }
 });
 
+window.addEventListener("beforeunload", function () {
+  stopHeartbeat();
+  navigator.sendBeacon("/auth/offline");
+});
+
 function setupAdditionalEventListeners() {
   const addFriendBtn = document.querySelector(".add-friend-btn");
   addFriendBtn.addEventListener("click", addNewFriend);
+  const friendsContainer = document.querySelector(".friend-content");
+  friendsContainer.addEventListener("click", (e) => {
+    if (e.target.classList.contains("remove-friend-btn")) {
+      const userId = e.target.dataset.userId;
+      const username = e.target.dataset.username;
+      removeFriend(userId, username);
+    }
+  });
+}
+
+let heartbeatInterval = null;
+
+function startHeartbeat() {
+  if (heartbeatInterval) return;
+  console.log("Starting heartbeat..."); // ADD THIS
+  
+  heartbeatInterval = setInterval(async () => {
+    try {
+      const response = await fetch('/auth/heartbeat', { 
+        method: 'POST', 
+        credentials: 'include' 
+      });
+      
+      if (response.ok) {
+        console.log("Heartbeat successful - user should be online"); // ADD THIS
+      }
+    } catch (error) {
+      console.log('Heartbeat failed:', error);
+    }
+  }, 1000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
 }
