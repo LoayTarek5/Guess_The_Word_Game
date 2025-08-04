@@ -20,6 +20,8 @@ router.get("/signup", redirectIfAuthenticated, (req, res) => {
 router.post("/signup", validateSignup, authController.signup.bind(authController));
 router.post("/login", validateLogin, authController.login.bind(authController));
 router.get("/me", authenticateToken, authController.getProfile.bind(authController));
+router.post("/offline", authController.setOffline.bind(authController));
+router.post("/heartbeat", authenticateToken, authController.heartbeat.bind(authController));
 router.post("/logout", authenticateToken, authController.logout.bind(authController));
 
 export default router;
