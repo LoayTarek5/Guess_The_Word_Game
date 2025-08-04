@@ -127,6 +127,20 @@ async function fetchUserDataFromServer() {
 
 function displayUserData(user, source) {
   const usernameElements = document.querySelectorAll(".username");
+  const userAvatar = document.querySelector(".user-avatar");
+  userAvatar.innerHTML = `<i class="fa-solid fa-user" 
+                        style="
+                        width: 100%; 
+                        height: 100%; 
+                        object-fit: cover; 
+                        border-radius: 50%; 
+                        overflow:hidden; 
+                        display: flex; 
+                        justify-content:center; 
+                        align-items: center; 
+                        font-size: 20px;
+                        ">
+                        </i>`;
   usernameElements.forEach((usernameElement) => {
     const currentUsername = usernameElement.textContent;
 
@@ -577,7 +591,7 @@ function startAutoRefresh() {
       console.log("Auto-refreshing user data...");
       fetchUserDataFromServer();
     }
-  }, 3 * 60 * 1000); 
+  }, 3 * 60 * 1000);
 }
 
 // Production-ready network status handling
@@ -667,19 +681,19 @@ let heartbeatInterval = null;
 function startHeartbeat() {
   if (heartbeatInterval) return;
   console.log("Starting heartbeat..."); // ADD THIS
-  
+
   heartbeatInterval = setInterval(async () => {
     try {
-      const response = await fetch('/auth/heartbeat', { 
-        method: 'POST', 
-        credentials: 'include' 
+      const response = await fetch("/auth/heartbeat", {
+        method: "POST",
+        credentials: "include",
       });
-      
+
       if (response.ok) {
         console.log("Heartbeat successful - user should be online"); // ADD THIS
       }
     } catch (error) {
-      console.log('Heartbeat failed:', error);
+      console.log("Heartbeat failed:", error);
     }
   }, 1000);
 }
