@@ -4,7 +4,9 @@ import { requireAuth } from '../middleware/routeGuards.js';
 const router = express.Router();
 
 router.get("/", requireAuth, (req, res) => {
-  res.render("dashboard");
+  res.render("dashboard", {
+    page: "dashboard"
+  });
 });
 
 export default router;
