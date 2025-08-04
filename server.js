@@ -1,6 +1,6 @@
 import "dotenv/config";
 import express from "express";
-// import expressLayouts from "express-ejs-layouts";
+import expressLayouts from "express-ejs-layouts";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import mongoose from "mongoose";
@@ -24,8 +24,10 @@ const __dirname = dirname(__filename);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-// app.set("layout", "layouts/layout");
+app.use(expressLayouts);
+app.set("layout", "layouts/layout");
 
+// Helmet to Secure content Policy 
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -92,7 +94,6 @@ app.use(limiter);
 app.use("/auth", authLimiter);
 
 app.use(express.json());
-// app.use(expressLayouts);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(express.static(join(__dirname, "public")));
