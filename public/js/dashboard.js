@@ -1,19 +1,12 @@
 // Production-ready dashboard.js with hybrid approach
 document.addEventListener("DOMContentLoaded", function () {
-  // Production-ready authentication check
   checkAuthentication();
-
-  // Load from localStorage first (instant display)
   loadUserDataFromStorage();
-
-  // Then fetch from server (get updated data)
   fetchUserDataFromServer();
-
-  // Setup logout functionality
   setupLogoutButton();
   loadFriendsData();
+  loadPendingRequests();
   initializePerformanceChart();
-
   startPeriodicAuthCheck();
   startAutoRefresh();
   setupAdditionalEventListeners();
@@ -177,38 +170,6 @@ function displayUserStats(stats) {
   lvlNum.textContent = stats.level;
 }
 
-// periodic authentication check (every 30 seconds)
-function startPeriodicAuthCheck() {
-  setInterval(async () => {
-    if (!document.hidden) {
-      // Only check if tab is active
-      try {
-        const response = await fetch("/auth/me", {
-          credentials: "include",
-        });
-
-        if (response.status === 401) {
-          const result = await response.json();
-
-          if (result.message.includes("logout from another device")) {
-            showNotification(
-              "You have been logged out from another device",
-              "warning"
-            );
-            setTimeout(() => {
-              localStorage.removeItem("user");
-              window.location.href = "/auth/login";
-            }, 2000);
-          }
-        }
-      } catch (error) {
-        // Ignore network errors in periodic check
-        console.log("Periodic auth check failed:", error.message);
-      }
-    }
-  }, 30000); // Check every 30 seconds
-}
-
 async function addNewFriend() {
   const username = prompt("Enter username to add as friend:");
   if (!username || username.trim() === "") return;
@@ -241,7 +202,7 @@ async function removeFriend(userId, username) {
     return;
   }
   try {
-    const response = await fetch(`/api/friends/${userId}`, {
+    const response = await fetch(`/api/friends/remove/${userId}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -255,6 +216,90 @@ async function removeFriend(userId, username) {
   } catch (error) {
     console.error("Error removing friend:", error);
     showNotification("Failed to remove friend", "error");
+  }
+}
+
+async function loadPendingRequests() {
+  try {
+    const response = await fetch("/api/friends/requests", {
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+
+      if (result.success) {
+        displayPendingRequests(result.received, result.sent);
+      }
+    } else {
+      console.error("Failed to load pending requests");
+    }
+  } catch (error) {
+    console.error("Error loading pending requests:", error);
+  }
+}
+
+async function cancelFriendRequest(requestId, toUsername) {
+  if (!confirm(`Cancel friend request to ${toUsername}?`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/friends/cancel/${requestId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showNotification(`Friend request to ${toUsername} cancelled`, "info");
+      loadPendingRequests();
+    } else {
+      showNotification(result.message, "error");
+    }
+  } catch (error) {
+    console.error("Error cancelling friend request:", error);
+    showNotification("Failed to cancel friend request", "error");
+  }
+}
+
+async function acceptFriend(userId, username) {
+  try {
+    const response = await fetch(`/api/friends/accept/${userId}`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const result = await response.json();
+    if (result.success) {
+      showNotification(`You are now friends with ${username}!`, "success");
+      loadFriendsData();
+      loadPendingRequests();
+    } else {
+      showNotification(result.message, "error");
+    }
+  } catch (error) {
+    console.error("Error accepting friend request:", error);
+    showNotification("Failed to accept friend request", "error");
+  }
+}
+
+async function declineFriend(userId, username) {
+  try {
+    const response = await fetch(`/api/friends/decline/${userId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const result = await response.json();
+    if (result.success) {
+      showNotification(`Friend request from ${username} declined`, "info");
+      loadPendingRequests();
+    } else {
+      showNotification(result.message, "error");
+    }
+  } catch (error) {
+    console.error("Error declining friend request:", error);
+    showNotification("Failed to decline friend request", "error");
   }
 }
 
@@ -303,7 +348,9 @@ async function loadFriendsData() {
                 (friend) => `
               <div class="friend-group">
                 <div class="friend-data">
-                  <span class="friend-avatar ${friend.isOnline ? "": "offline"}">
+                  <span class="friend-avatar ${
+                    friend.isOnline ? "" : "offline"
+                  }">
                     ${
                       friend.avatar
                         ? `<i 
@@ -575,25 +622,6 @@ function initializePerformanceChart() {
   });
 }
 
-// Auto-refresh functionality
-function startAutoRefresh() {
-  // Refresh friends data every 15 seconds
-  setInterval(() => {
-    if (!document.hidden) {
-      console.log("Auto-refreshing friends data...");
-      loadFriendsData();
-    }
-  }, 15000);
-
-  // Refresh user data every 5 minutes
-  setInterval(() => {
-    if (!document.hidden) {
-      console.log("Auto-refreshing user data...");
-      fetchUserDataFromServer();
-    }
-  }, 3 * 60 * 1000);
-}
-
 // Production-ready network status handling
 window.addEventListener("online", () => {
   console.log("Connection restored, refreshing data...");
@@ -659,7 +687,7 @@ document.addEventListener("click", (e) => {
 });
 
 window.addEventListener("beforeunload", function () {
-  stopHeartbeat();
+   stopAllIntervals();
   navigator.sendBeacon("/auth/offline");
 });
 
@@ -674,10 +702,105 @@ function setupAdditionalEventListeners() {
       removeFriend(userId, username);
     }
   });
+  // const requestContainer = document.querySelector(".requests-container");
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".accept-btn")) {
+      const button = e.target.closest(".accept-btn");
+      const requestId = button.dataset.requestId;
+      const username = button.dataset.username;
+      acceptFriend(requestId, username);
+    }
+
+    if (e.target.closest(".decline-btn")) {
+      const button = e.target.closest(".decline-btn");
+      const requestId = button.dataset.requestId;
+      const username = button.dataset.username;
+      declineFriend(requestId, username);
+    }
+
+    if (e.target.closest(".cancel-btn")) {
+      const button = e.target.closest(".cancel-btn");
+      const requestId = button.dataset.requestId;
+      const username = button.dataset.username;
+      cancelFriendRequest(requestId, username);
+    }
+  });
 }
 
 let heartbeatInterval = null;
+let periodicAuthInterval = null;
+let autoRefreshFriendsInterval = null;
+let autoRefreshUserInterval = null;
 
+function startPeriodicAuthCheck() {
+  if (periodicAuthInterval) return;
+  
+  periodicAuthInterval = setInterval(async () => {
+    if (!document.hidden) {
+      try {
+        const response = await fetch("/auth/me", {
+          credentials: "include",
+        });
+
+        if (response.status === 401) {
+          const result = await response.json();
+          if (result.message.includes("logout from another device")) {
+            showNotification("You have been logged out from another device", "warning");
+            setTimeout(() => {
+              localStorage.removeItem("user");
+              window.location.href = "/auth/login";
+            }, 2000);
+          }
+        }
+      } catch (error) {
+        console.log("Periodic auth check failed:", error.message);
+      }
+    }
+  }, 30000);
+}
+
+function startAutoRefresh() {
+  // Refresh friends data every 15 seconds
+  if (autoRefreshFriendsInterval) return;
+  
+  autoRefreshFriendsInterval = setInterval(() => {
+    if (!document.hidden) {
+      console.log("Auto-refreshing friends data...");
+      loadFriendsData();
+      loadPendingRequests();
+    }
+  }, 15000);
+
+  // Refresh user data every 5 minutes
+  if (autoRefreshUserInterval) return;
+  
+  autoRefreshUserInterval = setInterval(() => {
+    if (!document.hidden) {
+      console.log("Auto-refreshing user data...");
+      fetchUserDataFromServer();
+    }
+  }, 3 * 60 * 1000);
+}
+
+// 5. Add cleanup function
+function stopAllIntervals() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+  if (periodicAuthInterval) {
+    clearInterval(periodicAuthInterval);
+    periodicAuthInterval = null;
+  }
+  if (autoRefreshFriendsInterval) {
+    clearInterval(autoRefreshFriendsInterval);
+    autoRefreshFriendsInterval = null;
+  }
+  if (autoRefreshUserInterval) {
+    clearInterval(autoRefreshUserInterval);
+    autoRefreshUserInterval = null;
+  }
+}
 function startHeartbeat() {
   if (heartbeatInterval) return;
   console.log("Starting heartbeat..."); // ADD THIS
@@ -702,5 +825,115 @@ function stopHeartbeat() {
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
     heartbeatInterval = null;
+  }
+}
+
+///////////////////
+function displayPendingRequests(receivedRequests, sentRequests) {
+  // Create or update requests container
+  let requestsContainer = document.querySelector(".requests-container");
+
+  if (!requestsContainer) {
+    // Create requests container and add it before friends section
+    requestsContainer = document.createElement("div");
+    requestsContainer.className = "requests-container";
+
+    const friendsSection = document.querySelector(".friends-section");
+    friendsSection.parentNode.insertBefore(requestsContainer, friendsSection);
+  }
+
+  // Build requests HTML WITHOUT inline handlers
+  let requestsHTML = "";
+
+  if (receivedRequests.length > 0) {
+    requestsHTML += `
+      <div class="requests-section">
+        <h4>Friend Requests (${receivedRequests.length})</h4>
+        <div class="requests-content">
+          ${receivedRequests
+            .map(
+              (request) => `
+            <div class="request-item received">
+              <div class="request-info">
+                <span class="request-avatar">
+                  ${
+                    request.from.avatar
+                      ? `<img src="${request.from.avatar}" alt="${request.from.username}">`
+                      : request.from.username.charAt(0).toUpperCase()
+                  }
+                </span>
+                <div class="request-details">
+                  <p class="request-name">${request.from.username}</p>
+                  <span class="request-level">Level ${request.from.level}</span>
+                </div>
+              </div>
+              <div class="request-actions">
+                <button class="accept-btn" data-action="accept" data-request-id="${
+                  request.id
+                }" data-username="${request.from.username}">
+                  <i class="fa-solid fa-check"></i>
+                  Accept
+                </button>
+                <button class="decline-btn" data-action="decline" data-request-id="${
+                  request.id
+                }" data-username="${request.from.username}">
+                  <i class="fa-solid fa-times"></i>
+                  Decline
+                </button>
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  if (sentRequests.length > 0) {
+    requestsHTML += `
+      <div class="sent-requests-section">
+        <h4>Sent Requests (${sentRequests.length})</h4>
+        <div class="requests-content">
+          ${sentRequests
+            .map(
+              (request) => `
+            <div class="request-item sent">
+              <div class="request-info">
+                <span class="request-avatar">
+                  ${
+                    request.to.avatar
+                      ? `<img src="${request.to.avatar}" alt="${request.to.username}">`
+                      : request.to.username.charAt(0).toUpperCase()
+                  }
+                </span>
+                <div class="request-details">
+                  <p class="request-name">${request.to.username}</p>
+                  <span class="request-level">Level ${request.to.level}</span>
+                </div>
+              </div>
+              <div class="request-actions">
+                <button class="cancel-btn" data-action="cancel" data-request-id="${
+                  request.id
+                }" data-username="${request.to.username}">
+                  <i class="fa-solid fa-times"></i>
+                  Cancel
+                </button>
+                <span class="pending-status">Pending...</span>
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  if (requestsHTML === "") {
+    requestsContainer.style.display = "none";
+  } else {
+    requestsContainer.style.display = "block";
+    requestsContainer.innerHTML = requestsHTML;
   }
 }
