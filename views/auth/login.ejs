@@ -1,78 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Render All Elements Normally -->
-    <link rel="stylesheet" href="/style/normalize.css" />
-    <!-- Font Awesome Library -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+<header>
+  <i class="fa-solid fa-gamepad"></i>
+  <div class="text">
+    <h3>Welcome Back</h3>
+    <p>Login in to your WordGuess account</p>
+  </div>
+</header>
+<div id="alert" class="alert" style="display: none"></div>
+<form id="login-form" class="auth-form">
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input
+      type="email"
+      id="email"
+      name="email"
+      placeholder="Enter your email"
+      autocomplete="email"
+      required
     />
-
-    <!-- Main Template CSS File -->
-    <link rel="stylesheet" href="/style/framwork.css" />
-    <link rel="stylesheet" href="/style/auth.css" />
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
-      rel="stylesheet"
-    />
-    <title>Document</title>
-  </head>
-  <body>
-    <div class="container">
-      <div class="auth-container">
-        <header>
-          <i class="fa-solid fa-gamepad"></i>
-          <div class="text">
-            <h3>Welcome Back</h3>
-            <p>Login in to your WordGuess account</p>
-          </div>
-        </header>
-         <div id="alert" class="alert" style="display: none;"></div>
-        <form id="login-form" class="auth-form">
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="Enter your email"
-              autocomplete="email"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label for="password">Password</label>
-            <div class="password-group">
-              <input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="Create a password"
-                autocomplete="new-password"
-                required
-              />
-              <i class="fa-regular fa-eye toggle-password" data-target="password"></i>
-            </div>
-          </div>
-           <button type="submit" class="send-form" id="login-btn">
-            <span class="btn-text">Log In</span>
-            <span class="btn-loader" style="display: none;">
-              <i class="fas fa-spinner fa-spin"></i>
-            </span>
-          </button>
-        </form>
-        <div class="already-have">
-          <p>Don't have an account?</p>
-          <a href="/auth/signup">sign-up</a>
-        </div>
-      </div>
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <div class="password-group">
+      <input
+        type="password"
+        id="password"
+        name="password"
+        placeholder="Create a password"
+        autocomplete="new-password"
+        required
+      />
+      <i class="fa-regular fa-eye toggle-password" data-target="password"></i>
     </div>
-     <script src="/js/authLogin.js"></script>
-  </body>
-</html>
+  </div>
+  <button type="submit" class="send-form" id="login-btn">
+    <span class="btn-text">Log In</span>
+    <span class="btn-loader" style="display: none">
+      <i class="fas fa-spinner fa-spin"></i>
+    </span>
+  </button>
+</form>
+<div class="already-have">
+  <p>Don't have an account?</p>
+  <a href="/auth/signup">sign-up</a>
+</div>
+<script src="/js/authLogin.js"></script>
