@@ -84,7 +84,6 @@ class FriendController {
           { requester: recipient._id, recipient: userId },
         ],
       });
-
       if (existingFriendship) {
         let message = "";
         switch (existingFriendship.status) {
@@ -131,6 +130,39 @@ class FriendController {
       res.status(500).json({
         success: false,
         message: "Failed to send friend request",
+      });
+    }
+  }
+
+  async cancelFriendRequest(req, res) {
+    try {
+      const { requestId } = req.params;
+      const userId = req.user.userId;
+
+      const friendship = await Friendship.findOne({
+        _id: requestId,
+        requester: userId,
+        status: "pending",
+      });
+
+      if (!friendship) {
+        return res.status(404).json({
+          success: false,
+          message: "Friend request not found",
+        });
+      }
+
+      await Friendship.deleteOne({ _id: friendship._id });
+
+      res.json({
+        success: true,
+        message: "Friend request cancelled",
+      });
+    } catch (error) {
+      logger.error("Cancel friend request error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to cancel friend request",
       });
     }
   }
@@ -191,12 +223,10 @@ class FriendController {
         });
       }
 
-      friendship.status = "declined";
-      await friendship.save();
-
       logger.info(
         `Friend request declined: ${friendship.requester.username} -> ${req.user.username}`
       );
+      await Friendship.deleteOne({ _id: friendship._id });
 
       res.json({
         success: true,
