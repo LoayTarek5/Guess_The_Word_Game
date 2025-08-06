@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import friendRoutes from "./routes/friends.js";
+import gameRoutes from "./routes/games.js";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
@@ -102,6 +103,8 @@ app.use(express.static(join(__dirname, "public")));
 app.use("/auth", authRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/api/friends", friendRoutes);
+app.use("/api/games", gameRoutes);
+
 // 404 handler
 app.use(notFound);
 
