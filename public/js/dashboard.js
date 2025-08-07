@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupLogoutButton();
   loadFriendsData();
   loadPendingRequests();
+  loadMatchHistory();
   initializePerformanceChart();
   startPeriodicAuthCheck();
   startAutoRefresh();
@@ -435,10 +436,10 @@ async function loadMatchHistory() {
 }
 
 function displayMatchHistory(matches) {
-  const matchesContent = document.querySelector('.matches-content');
-  
+  const matchesContent = document.querySelector(".matches-content");
+
   if (!matchesContent) {
-    console.warn('Matches content container not found');
+    console.warn("Matches content container not found");
     return;
   }
 
@@ -453,7 +454,9 @@ function displayMatchHistory(matches) {
     return;
   }
 
-  matchesContent.innerHTML = matches.map(match => `
+  matchesContent.innerHTML = matches
+    .map(
+      (match) => `
     <div class="match-data">
       <div class="match-info">
         <span class="avatar">
@@ -474,21 +477,26 @@ function displayMatchHistory(matches) {
             <span class="dot-space">•</span>
             <span class="Duration">Duration: ${match.durationDisplay}</span>
             <span class="dot-space">•</span>
-            <span class="word">Word: ${(match.word || 'UNKNOWN').toUpperCase()}</span>
+            <span class="word">Word: ${(
+              match.word || "UNKNOWN"
+            ).toUpperCase()}</span>
           </div>
         </div>
       </div>
       <div class="match-stats">
         <div class="match-result">
-          <span class="you">${match.yourScore}</span>-<span class="opp">${match.opponentScore}</span>
+          <span class="you">${match.yourScore}</span>-<span class="opp">${
+        match.opponentScore
+      }</span>
         </div>
         <span class="num-guess">${match.guessesDisplay}</span>
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join("");
 }
 
-// logout function
 function setupLogoutButton() {
   const logoutBtn = document.getElementById("logout-btn");
   const btnText = logoutBtn.querySelector(".btn-text");
@@ -548,15 +556,17 @@ function setupLogoutButton() {
 async function initializePerformanceChart() {
   const ctx = document.getElementById("performance-chart");
   if (!ctx) {
-    console.warn('Performance chart canvas not found');
+    console.warn("Performance chart canvas not found");
     return;
   }
+  
+  let performanceData;
 
   try {
     // Show loading state
     const chartContainer = ctx.parentElement;
-    const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'chart-loading';
+    const loadingDiv = document.createElement("div");
+    loadingDiv.className = "chart-loading";
     loadingDiv.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #666;">
         <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
@@ -566,11 +576,9 @@ async function initializePerformanceChart() {
     chartContainer.appendChild(loadingDiv);
 
     // Fetch real performance data
-    const response = await fetch('/api/games/performance-overview?months=6', {
-      credentials: 'include',
+    const response = await fetch("/api/games/performance?months=6", {
+      credentials: "include",
     });
-
-    let performanceData;
 
     if (response.ok) {
       const result = await response.json();
@@ -578,11 +586,11 @@ async function initializePerformanceChart() {
         // Use real data from server
         const monthlyData = result.performanceOverview.monthlyData;
         performanceData = {
-          labels: monthlyData.map(month => month.month),
+          labels: monthlyData.map((month) => month.month),
           datasets: [
             {
               label: "Wins",
-              data: monthlyData.map(month => month.wins),
+              data: monthlyData.map((month) => month.wins),
               backgroundColor: "#10b981",
               borderColor: "#10b981",
               borderWidth: 2,
@@ -591,7 +599,7 @@ async function initializePerformanceChart() {
             },
             {
               label: "Losses",
-              data: monthlyData.map(month => month.losses),
+              data: monthlyData.map((month) => month.losses),
               backgroundColor: "#ef4444",
               borderColor: "#ef4444",
               borderWidth: 2,
@@ -603,30 +611,30 @@ async function initializePerformanceChart() {
 
         // Update performance overview text
         updatePerformanceOverviewText(result.performanceOverview);
-        
+
         // Remove loading state
         if (loadingDiv.parentElement) {
           loadingDiv.parentElement.removeChild(loadingDiv);
         }
       } else {
-        throw new Error('Failed to load performance data: ' + result.message);
+        throw new Error("Failed to load performance data: " + result.message);
       }
     } else {
-      throw new Error('Network error: ' + response.status);
+      throw new Error("Network error: " + response.status);
     }
   } catch (error) {
-    console.error('Error loading performance data:', error);
-    
+    console.error("Error loading performance data:", error);
+
     // Remove loading state
-    const loadingDiv = document.querySelector('.chart-loading');
+    const loadingDiv = document.querySelector(".chart-loading");
     if (loadingDiv && loadingDiv.parentElement) {
       loadingDiv.parentElement.removeChild(loadingDiv);
     }
-    
+
     // Show error state
     const chartContainer = ctx.parentElement;
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'chart-error';
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "chart-error";
     errorDiv.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #dc3545;">
         <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
@@ -641,13 +649,8 @@ async function initializePerformanceChart() {
     return;
   }
 
-  // Destroy existing chart if it exists
-  if (window.performanceChart) {
-    window.performanceChart.destroy();
-  }
-
   // Create the chart
-  window.performanceChart = new Chart(ctx, {
+  new Chart(ctx, {
     type: "bar",
     data: performanceData,
     options: {
@@ -656,15 +659,15 @@ async function initializePerformanceChart() {
       plugins: {
         legend: {
           display: true,
-          position: 'top',
+          position: "top",
           labels: {
             boxWidth: 12,
             padding: 20,
             font: {
               size: 12,
-              family: "'Geist', sans-serif"
-            }
-          }
+              family: "'Geist', sans-serif",
+            },
+          },
         },
         tooltip: {
           backgroundColor: "#333",
@@ -674,21 +677,21 @@ async function initializePerformanceChart() {
           borderWidth: 1,
           cornerRadius: 8,
           titleFont: {
-            family: "'Geist', sans-serif"
+            family: "'Geist', sans-serif",
           },
           bodyFont: {
-            family: "'Geist', sans-serif"
+            family: "'Geist', sans-serif",
           },
           callbacks: {
-            afterLabel: function(context) {
+            afterLabel: function (context) {
               const dataIndex = context.dataIndex;
               const wins = performanceData.datasets[0].data[dataIndex];
               const losses = performanceData.datasets[1].data[dataIndex];
               const total = wins + losses;
               const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
               return `Win Rate: ${winRate}%`;
-            }
-          }
+            },
+          },
         },
       },
       scales: {
@@ -701,9 +704,9 @@ async function initializePerformanceChart() {
           },
           ticks: {
             font: {
-              family: "'Geist', sans-serif"
-            }
-          }
+              family: "'Geist', sans-serif",
+            },
+          },
         },
         y: {
           beginAtZero: true,
@@ -716,8 +719,8 @@ async function initializePerformanceChart() {
           ticks: {
             stepSize: 5,
             font: {
-              family: "'Geist', sans-serif"
-            }
+              family: "'Geist', sans-serif",
+            },
           },
         },
       },
@@ -731,31 +734,37 @@ async function initializePerformanceChart() {
 
 function updatePerformanceOverviewText(performanceOverview) {
   // Update the performance section title
-  const performanceTitle = document.querySelector('.performance-section h3');
+  const performanceTitle = document.querySelector(".performance-section h3");
   if (performanceTitle) {
-    performanceTitle.textContent = 'Performance Overview';
+    performanceTitle.textContent = "Performance Overview";
   }
-  
+
   // Update the section subtitle
-  const sectionSubtitle = document.querySelector('.performance-section .section-subtitle');
+  const sectionSubtitle = document.querySelector(
+    ".performance-section .section-subtitle"
+  );
   if (sectionSubtitle) {
     sectionSubtitle.textContent = `Your wins and losses over the ${performanceOverview.period.toLowerCase()}`;
   }
 
   // Update summary stats if elements exist
-  const totalGamesEl = document.querySelector('.performance-total-games, [data-stat="total-games"]');
-  const winRateEl = document.querySelector('.performance-win-rate, [data-stat="win-rate"]');
-  
+  const totalGamesEl = document.querySelector(
+    '.performance-total-games, [data-stat="total-games"]'
+  );
+  const winRateEl = document.querySelector(
+    '.performance-win-rate, [data-stat="win-rate"]'
+  );
+
   if (totalGamesEl) {
     totalGamesEl.textContent = performanceOverview.summary.totalGames;
   }
-  
+
   if (winRateEl) {
     winRateEl.textContent = `${performanceOverview.summary.overallWinRate}%`;
   }
 
   // If there's a stats summary container, update it
-  const statsSummary = document.querySelector('.performance-stats-summary');
+  const statsSummary = document.querySelector(".performance-stats-summary");
   if (statsSummary) {
     statsSummary.innerHTML = `
       <div class="stat-item">
@@ -778,14 +787,13 @@ function updatePerformanceOverviewText(performanceOverview) {
   }
 
   // Log the performance data for debugging
-  console.log('Performance Overview Updated:', {
+  console.log("Performance Overview Updated:", {
     period: performanceOverview.period,
     totalGames: performanceOverview.summary.totalGames,
-    winRate: performanceOverview.summary.overallWinRate + '%'
+    winRate: performanceOverview.summary.overallWinRate + "%",
   });
 }
 
-// notification system
 function showNotification(message, type = "info") {
   // Remove existing notifications
   const existingNotifications = document.querySelectorAll(".notification");
@@ -860,11 +868,12 @@ function showNotification(message, type = "info") {
   }, 4000);
 }
 
-// Production-ready network status handling
 window.addEventListener("online", () => {
   console.log("Connection restored, refreshing data...");
   showNotification("Connection restored!", "success");
   fetchUserDataFromServer();
+  loadMatchHistory();
+  initializePerformanceChart();
 });
 
 window.addEventListener("offline", () => {
@@ -1019,11 +1028,12 @@ function startAutoRefresh() {
     if (!document.hidden) {
       console.log("Auto-refreshing user data...");
       fetchUserDataFromServer();
+      loadMatchHistory();
+      initializePerformanceChart();
     }
   }, 3 * 60 * 1000);
 }
 
-// 5. Add cleanup function
 function stopAllIntervals() {
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
@@ -1042,6 +1052,7 @@ function stopAllIntervals() {
     autoRefreshUserInterval = null;
   }
 }
+
 function startHeartbeat() {
   if (heartbeatInterval) return;
   console.log("Starting heartbeat..."); // ADD THIS
@@ -1069,7 +1080,19 @@ function stopHeartbeat() {
   }
 }
 
-///////////////////
+function getResultIcon(status) {
+  switch (status) {
+    case "won":
+      return "fa-trophy";
+    case "lost":
+      return "fa-times-circle";
+    case "draw":
+      return "fa-handshake";
+    default:
+      return "fa-gamepad";
+  }
+}
+
 function displayPendingRequests(receivedRequests, sentRequests) {
   // Create or update requests container
   let requestsContainer = document.querySelector(".requests-container");
