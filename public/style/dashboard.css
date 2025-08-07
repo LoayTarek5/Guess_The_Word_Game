@@ -556,7 +556,6 @@ aside#sidebar.active ~ .main-content {
   grid-column: 1 / -1;
   margin-top: 30px;
 }
-
 .matches-section h3 {
   font-size: 24px;
   font-weight: 600;
@@ -564,13 +563,11 @@ aside#sidebar.active ~ .main-content {
   margin: 0px;
   margin-bottom: 15px;
 }
-
 .matches-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-
 .match-data {
   display: flex;
   align-items: center;
@@ -580,63 +577,86 @@ aside#sidebar.active ~ .main-content {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #dee3ed;
 }
-
 .match-data:last-child {
   border-bottom: none;
 }
-
+.match-data .wrap-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .match-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
+.match-info .match-status-wrapper {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
 .match-info .avatar {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: linear-gradient(135deg, #e9ecef, #adb5bd);
   display: block;
 }
-
 .match-info .info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
-
 .match-info .name {
   font-size: 16px;
   color: #212529;
   margin: 0px;
   font-weight: 600;
 }
-
-.match-info .time {
-  font-size: 13px;
+.match-info .details {
+  font-size: 14px;
   color: var(--txt-color);
+  display: flex;
+  gap: 12px;
 }
-
+@media (max-width: 768px) {
+  .match-info .details {
+    font-size: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .match-info {
+    flex-direction: column;
+  }
+  .match-info .details {
+    font-size: 10px;
+  }
+  .match-info .details {
+    flex-direction: column;
+    gap: 0px;
+  }
+  .match-info .match-status-wrapper {
+    flex-direction: column;
+  }
+}
 .match-stats {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: end;
+  flex-direction: column;
+  gap: 8px;
 }
-
+.match-stats .num-guess {
+  color: var(--txt-color);
+  font-size: 13px;
+}
 .match-result {
   font-size: 16px;
   font-weight: 600;
   color: #212529;
 }
-
 .match-result .you {
   color: #212529;
 }
-
 .match-result .opp {
   color: #212529;
 }
-
 .match-status {
   display: flex;
   align-items: center;
@@ -646,31 +666,25 @@ aside#sidebar.active ~ .main-content {
   font-size: 12px;
   font-weight: 500;
 }
-
 .match-status.won {
   background: #28a745;
   color: white;
 }
-
 .match-status.lost {
   background: #dc3545;
   color: white;
 }
-
 .match-status.draw {
   background: #212529;
   color: white;
 }
-
 .match-status i {
   font-size: 10px;
 }
-/*///////////////////////////////*/
-/* Friend Requests Styles */
+
 .requests-container {
   margin-bottom: 20px;
 }
-
 .requests-section,
 .sent-requests-section {
   background: white;
@@ -679,14 +693,12 @@ aside#sidebar.active ~ .main-content {
   margin-bottom: 15px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-
 .requests-section h4,
 .sent-requests-section h4 {
   margin: 0 0 15px 0;
   color: #333;
   font-size: 16px;
 }
-
 .request-item {
   display: flex;
   justify-content: space-between;
@@ -694,17 +706,14 @@ aside#sidebar.active ~ .main-content {
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
 }
-
 .request-item:last-child {
   border-bottom: none;
 }
-
 .request-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
 .request-avatar {
   width: 40px;
   height: 40px;
@@ -716,35 +725,29 @@ aside#sidebar.active ~ .main-content {
   font-weight: bold;
   overflow: hidden;
 }
-
 .request-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .request-details {
   display: flex;
   flex-direction: column;
 }
-
 .request-name {
   margin: 0;
   font-weight: 500;
   font-size: 14px;
 }
-
 .request-level {
   font-size: 12px;
   color: #666;
 }
-
 .request-actions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
-
 .accept-btn,
 .decline-btn,
 .cancel-btn {
@@ -758,33 +761,27 @@ aside#sidebar.active ~ .main-content {
   gap: 4px;
   transition: all 0.2s;
 }
-
 .accept-btn {
   background: #28a745;
   color: white;
 }
-
 .accept-btn:hover {
   background: #218838;
 }
-
 .decline-btn,
 .cancel-btn {
   background: #dc3545;
   color: white;
 }
-
 .decline-btn:hover,
 .cancel-btn:hover {
   background: #c82333;
 }
-
 .pending-status {
   font-size: 12px;
   color: #6c757d;
   font-style: italic;
 }
-
 .request-badge {
   animation: pulse 2s infinite;
 }
