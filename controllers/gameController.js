@@ -44,20 +44,20 @@ class GameController {
           opponentAvatar: opponent?.user.avatar,
           opponentDisplay: `Vs ${opponent?.user.username || "Unknown"}`,
           result: {
-            status: result.toLowerCase(), 
-            display: result, 
+            status: result.toLowerCase(),
+            display: result,
           },
           scoreDisplay: `${yourScore} - ${opponentScore}`,
           yourScore,
           opponentScore,
-          date: this.formatDate(match.completedAt), 
+          date: this.formatDate(match.completedAt),
           completedAt: match.completedAt,
           duration: this.formatDuration(match.completedAt, match.startedAt),
           durationDisplay: this.formatDuration(
             match.completedAt,
             match.startedAt
           ),
-          word: match.targetWord || match.word || "UNKNOWN", 
+          word: match.targetWord || match.word || "UNKNOWN",
           wordDisplay: `Word: ${(
             match.targetWord ||
             match.word ||
@@ -97,6 +97,132 @@ class GameController {
       res.status(500).json({
         success: false,
         message: "Failed to load match history",
+      });
+    }
+  }
+
+  async getPerformanceData(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { months = 6 } = req.query; // Default to 6 months
+
+      // Calculate date range
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - months);
+
+      // Get all completed games in the date range
+      const games = await Game.find({
+        "players.user": userId,
+        status: "completed",
+        completedAt: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      }).populate("winner", "username");
+
+      // Group games by month
+      const monthlyStats = {};
+
+      // Initialize months with zero values
+      for (let i = 0; i < months; i++) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthKey = date.toLocaleString("en-US", { month: "short" });
+        monthlyStats[monthKey] = {
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          total: 0,
+          month: monthKey,
+          monthIndex: i,
+        };
+      }
+
+      // Process each game
+      games.forEach((game) => {
+        const gameDate = new Date(game.completedAt);
+        const monthKey = gameDate.toLocaleString("en-US", { month: "short" });
+
+        if (monthlyStats[monthKey]) {
+          monthlyStats[monthKey].total++;
+
+          // Determine result
+          const currentUser = game.players.find(
+            (p) => p.user.toString() === userId
+          );
+          const opponent = game.players.find(
+            (p) => p.user.toString() !== userId
+          );
+
+          let result = "draw";
+          if (game.winner) {
+            result = game.winner._id.toString() === userId ? "won" : "lost";
+          } else if (currentUser && opponent) {
+            const yourScore = currentUser.score || 0;
+            const oppScore = opponent.score || 0;
+
+            if (yourScore > oppScore) result = "won";
+            else if (yourScore < oppScore) result = "lost";
+            else result = "draw";
+          }
+
+          // Update stats
+          if (result === "won") monthlyStats[monthKey].wins++;
+          else if (result === "lost") monthlyStats[monthKey].losses++;
+          else monthlyStats[monthKey].draws++;
+        }
+      });
+
+      // Convert to array and sort by month (most recent first)
+      const performanceData = Object.values(monthlyStats)
+        .sort((a, b) => a.monthIndex - b.monthIndex)
+        .reverse()
+        .map((stat) => ({
+          month: stat.month,
+          wins: stat.wins,
+          losses: stat.losses,
+          draws: stat.draws,
+          total: stat.total,
+          winRate:
+            stat.total > 0 ? Math.round((stat.wins / stat.total) * 100) : 0,
+        }));
+
+      // Calculate overall stats for the period
+      const totalGames = games.length;
+      const totalWins = performanceData.reduce(
+        (sum, month) => sum + month.wins,
+        0
+      );
+      const totalLosses = performanceData.reduce(
+        (sum, month) => sum + month.losses,
+        0
+      );
+      const totalDraws = performanceData.reduce(
+        (sum, month) => sum + month.draws,
+        0
+      );
+
+      res.json({
+        success: true,
+        performanceOverview: {
+          period: `Last ${months} months`,
+          monthlyData: performanceData,
+          summary: {
+            totalGames,
+            totalWins,
+            totalLosses,
+            totalDraws,
+            overallWinRate:
+              totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error("Get performance overview error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to load performance overview",
       });
     }
   }
