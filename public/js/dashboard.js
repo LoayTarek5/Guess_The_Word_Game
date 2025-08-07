@@ -545,6 +545,246 @@ function setupLogoutButton() {
   }
 }
 
+async function initializePerformanceChart() {
+  const ctx = document.getElementById("performance-chart");
+  if (!ctx) {
+    console.warn('Performance chart canvas not found');
+    return;
+  }
+
+  try {
+    // Show loading state
+    const chartContainer = ctx.parentElement;
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'chart-loading';
+    loadingDiv.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+        <p>Loading performance data...</p>
+      </div>
+    `;
+    chartContainer.appendChild(loadingDiv);
+
+    // Fetch real performance data
+    const response = await fetch('/api/games/performance-overview?months=6', {
+      credentials: 'include',
+    });
+
+    let performanceData;
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        // Use real data from server
+        const monthlyData = result.performanceOverview.monthlyData;
+        performanceData = {
+          labels: monthlyData.map(month => month.month),
+          datasets: [
+            {
+              label: "Wins",
+              data: monthlyData.map(month => month.wins),
+              backgroundColor: "#10b981",
+              borderColor: "#10b981",
+              borderWidth: 2,
+              borderRadius: 4,
+              borderSkipped: false,
+            },
+            {
+              label: "Losses",
+              data: monthlyData.map(month => month.losses),
+              backgroundColor: "#ef4444",
+              borderColor: "#ef4444",
+              borderWidth: 2,
+              borderRadius: 4,
+              borderSkipped: false,
+            },
+          ],
+        };
+
+        // Update performance overview text
+        updatePerformanceOverviewText(result.performanceOverview);
+        
+        // Remove loading state
+        if (loadingDiv.parentElement) {
+          loadingDiv.parentElement.removeChild(loadingDiv);
+        }
+      } else {
+        throw new Error('Failed to load performance data: ' + result.message);
+      }
+    } else {
+      throw new Error('Network error: ' + response.status);
+    }
+  } catch (error) {
+    console.error('Error loading performance data:', error);
+    
+    // Remove loading state
+    const loadingDiv = document.querySelector('.chart-loading');
+    if (loadingDiv && loadingDiv.parentElement) {
+      loadingDiv.parentElement.removeChild(loadingDiv);
+    }
+    
+    // Show error state
+    const chartContainer = ctx.parentElement;
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'chart-error';
+    errorDiv.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #dc3545;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+        <p>Failed to load performance data</p>
+        <button onclick="initializePerformanceChart()" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: inherit;">
+          <i class="fas fa-redo" style="margin-right: 5px;"></i>
+          Retry
+        </button>
+      </div>
+    `;
+    chartContainer.appendChild(errorDiv);
+    return;
+  }
+
+  // Destroy existing chart if it exists
+  if (window.performanceChart) {
+    window.performanceChart.destroy();
+  }
+
+  // Create the chart
+  window.performanceChart = new Chart(ctx, {
+    type: "bar",
+    data: performanceData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: 12,
+            padding: 20,
+            font: {
+              size: 12,
+              family: "'Geist', sans-serif"
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: "#333",
+          titleColor: "#fff",
+          bodyColor: "#fff",
+          borderColor: "#666",
+          borderWidth: 1,
+          cornerRadius: 8,
+          titleFont: {
+            family: "'Geist', sans-serif"
+          },
+          bodyFont: {
+            family: "'Geist', sans-serif"
+          },
+          callbacks: {
+            afterLabel: function(context) {
+              const dataIndex = context.dataIndex;
+              const wins = performanceData.datasets[0].data[dataIndex];
+              const losses = performanceData.datasets[1].data[dataIndex];
+              const total = wins + losses;
+              const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+              return `Win Rate: ${winRate}%`;
+            }
+          }
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          border: {
+            display: false,
+          },
+          ticks: {
+            font: {
+              family: "'Geist', sans-serif"
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: "#f0f0f0",
+          },
+          border: {
+            display: false,
+          },
+          ticks: {
+            stepSize: 5,
+            font: {
+              family: "'Geist', sans-serif"
+            }
+          },
+        },
+      },
+      interaction: {
+        intersect: false,
+        mode: "index",
+      },
+    },
+  });
+}
+
+function updatePerformanceOverviewText(performanceOverview) {
+  // Update the performance section title
+  const performanceTitle = document.querySelector('.performance-section h3');
+  if (performanceTitle) {
+    performanceTitle.textContent = 'Performance Overview';
+  }
+  
+  // Update the section subtitle
+  const sectionSubtitle = document.querySelector('.performance-section .section-subtitle');
+  if (sectionSubtitle) {
+    sectionSubtitle.textContent = `Your wins and losses over the ${performanceOverview.period.toLowerCase()}`;
+  }
+
+  // Update summary stats if elements exist
+  const totalGamesEl = document.querySelector('.performance-total-games, [data-stat="total-games"]');
+  const winRateEl = document.querySelector('.performance-win-rate, [data-stat="win-rate"]');
+  
+  if (totalGamesEl) {
+    totalGamesEl.textContent = performanceOverview.summary.totalGames;
+  }
+  
+  if (winRateEl) {
+    winRateEl.textContent = `${performanceOverview.summary.overallWinRate}%`;
+  }
+
+  // If there's a stats summary container, update it
+  const statsSummary = document.querySelector('.performance-stats-summary');
+  if (statsSummary) {
+    statsSummary.innerHTML = `
+      <div class="stat-item">
+        <span class="stat-label">Total Games:</span>
+        <span class="stat-value">${performanceOverview.summary.totalGames}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Win Rate:</span>
+        <span class="stat-value">${performanceOverview.summary.overallWinRate}%</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Wins:</span>
+        <span class="stat-value">${performanceOverview.summary.totalWins}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Losses:</span>
+        <span class="stat-value">${performanceOverview.summary.totalLosses}</span>
+      </div>
+    `;
+  }
+
+  // Log the performance data for debugging
+  console.log('Performance Overview Updated:', {
+    period: performanceOverview.period,
+    totalGames: performanceOverview.summary.totalGames,
+    winRate: performanceOverview.summary.overallWinRate + '%'
+  });
+}
+
 // notification system
 function showNotification(message, type = "info") {
   // Remove existing notifications
@@ -618,84 +858,6 @@ function showNotification(message, type = "info") {
       }
     }, 300);
   }, 4000);
-}
-
-function initializePerformanceChart() {
-  const ctx = document.getElementById("performance-chart");
-  if (!ctx) return;
-
-  // Mock performance data
-  const performanceData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        label: "Wins",
-        data: [12, 15, 18, 22, 16, 20],
-        backgroundColor: "#10b981",
-        borderColor: "#10b981",
-        borderWidth: 2,
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-      {
-        label: "Losses",
-        data: [8, 5, 6, 3, 9, 4],
-        backgroundColor: "#ef4444",
-        borderColor: "#ef4444",
-        borderWidth: 2,
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-    ],
-  };
-
-  new Chart(ctx, {
-    type: "bar",
-    data: performanceData,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: "#333",
-          titleColor: "#fff",
-          bodyColor: "#fff",
-          borderColor: "#666",
-          borderWidth: 1,
-          cornerRadius: 8,
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          border: {
-            display: false,
-          },
-        },
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: "#f0f0f0",
-          },
-          border: {
-            display: false,
-          },
-          ticks: {
-            stepSize: 6,
-          },
-        },
-      },
-      interaction: {
-        intersect: false,
-        mode: "index",
-      },
-    },
-  });
 }
 
 // Production-ready network status handling
