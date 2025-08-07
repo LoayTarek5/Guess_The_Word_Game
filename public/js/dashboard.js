@@ -412,6 +412,82 @@ async function loadFriendsData() {
   }
 }
 
+async function loadMatchHistory() {
+  try {
+    const response = await fetch("/api/games/history?limit=10&page=1", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        displayMatchHistory(result.matchHistory);
+      } else {
+        console.error("Failed to load match history:", result.message);
+      }
+    } else {
+      console.error("Failed to fetch match history");
+    }
+  } catch (error) {
+    console.error("Error loading match history:", error);
+  }
+}
+
+function displayMatchHistory(matches) {
+  const matchesContent = document.querySelector('.matches-content');
+  
+  if (!matchesContent) {
+    console.warn('Matches content container not found');
+    return;
+  }
+
+  if (matches.length === 0) {
+    matchesContent.innerHTML = `
+      <div style="text-align: center; padding: 30px; color: #999;">
+        <i class="fas fa-gamepad" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+        <p>No matches played yet</p>
+        <p style="font-size: 12px;">Start playing to see your match history!</p>
+      </div>
+    `;
+    return;
+  }
+
+  matchesContent.innerHTML = matches.map(match => `
+    <div class="match-data">
+      <div class="match-info">
+        <span class="avatar">
+          <i class="fa-solid fa-user"></i>
+        </span>
+        <div class="wrap-info">
+          <div class="match-status-wrapper">
+            <div class="match-status ${match.result.status}">
+              <i class="fas ${getResultIcon(match.result.status)}"></i>
+              ${match.result.display}
+            </div>
+            <p class="name">${match.opponentDisplay}</p>
+          </div>
+          <div class="details">
+            <span class="time">${match.timeAgo}</span>
+            <span class="dot-space">•</span>
+            <span class="date">${match.date}</span>
+            <span class="dot-space">•</span>
+            <span class="Duration">Duration: ${match.durationDisplay}</span>
+            <span class="dot-space">•</span>
+            <span class="word">Word: ${(match.word || 'UNKNOWN').toUpperCase()}</span>
+          </div>
+        </div>
+      </div>
+      <div class="match-stats">
+        <div class="match-result">
+          <span class="you">${match.yourScore}</span>-<span class="opp">${match.opponentScore}</span>
+        </div>
+        <span class="num-guess">${match.guessesDisplay}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
 // logout function
 function setupLogoutButton() {
   const logoutBtn = document.getElementById("logout-btn");
@@ -687,7 +763,7 @@ document.addEventListener("click", (e) => {
 });
 
 window.addEventListener("beforeunload", function () {
-   stopAllIntervals();
+  stopAllIntervals();
   navigator.sendBeacon("/auth/offline");
 });
 
@@ -734,7 +810,7 @@ let autoRefreshUserInterval = null;
 
 function startPeriodicAuthCheck() {
   if (periodicAuthInterval) return;
-  
+
   periodicAuthInterval = setInterval(async () => {
     if (!document.hidden) {
       try {
@@ -745,7 +821,10 @@ function startPeriodicAuthCheck() {
         if (response.status === 401) {
           const result = await response.json();
           if (result.message.includes("logout from another device")) {
-            showNotification("You have been logged out from another device", "warning");
+            showNotification(
+              "You have been logged out from another device",
+              "warning"
+            );
             setTimeout(() => {
               localStorage.removeItem("user");
               window.location.href = "/auth/login";
@@ -762,7 +841,7 @@ function startPeriodicAuthCheck() {
 function startAutoRefresh() {
   // Refresh friends data every 15 seconds
   if (autoRefreshFriendsInterval) return;
-  
+
   autoRefreshFriendsInterval = setInterval(() => {
     if (!document.hidden) {
       console.log("Auto-refreshing friends data...");
@@ -773,7 +852,7 @@ function startAutoRefresh() {
 
   // Refresh user data every 5 minutes
   if (autoRefreshUserInterval) return;
-  
+
   autoRefreshUserInterval = setInterval(() => {
     if (!document.hidden) {
       console.log("Auto-refreshing user data...");
