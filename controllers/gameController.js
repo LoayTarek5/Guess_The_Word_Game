@@ -112,7 +112,7 @@ class GameController {
       startDate.setMonth(startDate.getMonth() - months);
 
       // Get all completed games in the date range
-      const games = await Game.find({
+      const games = await Games.find({
         "players.user": userId,
         status: "completed",
         completedAt: {
