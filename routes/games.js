@@ -4,9 +4,9 @@ import gameController from "../controllers/gameController.js";
 
 const router = express.Router();
 // Get match history
-router.get("/history", requireAuth, gameController.getMatchHistory);
+router.get("/history", requireAuth, gameController.getMatchHistory.bind(gameController));
 
 // Get performance data
-router.get("/performance", requireAuth, gameController.getPerformanceData);
+router.get("/performance", requireAuth, gameController.getPerformanceData.bind(gameController));
 
 export default router;
