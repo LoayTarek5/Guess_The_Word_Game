@@ -785,13 +785,6 @@ function updatePerformanceOverviewText(performanceOverview) {
       </div>
     `;
   }
-
-  // Log the performance data for debugging
-  console.log("Performance Overview Updated:", {
-    period: performanceOverview.period,
-    totalGames: performanceOverview.summary.totalGames,
-    winRate: performanceOverview.summary.overallWinRate + "%",
-  });
 }
 
 function showNotification(message, type = "info") {
