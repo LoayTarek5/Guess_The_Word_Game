@@ -600,9 +600,12 @@ aside#sidebar.active ~ .main-content {
   height: 50px;
   border-radius: 50%;
   background: linear-gradient(135deg, #e9ecef, #adb5bd);
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-.match-info .info {
+.match-info .avatar i {
+  font-size: 25px;
 }
 .match-info .name {
   font-size: 16px;
