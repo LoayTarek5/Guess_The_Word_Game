@@ -1,436 +1,178 @@
-// testGameSeeder.js
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-dotenv.config();
+import "dotenv/config";
+import mongoose from "mongoose";
+import User from "../models/User.js";
+import Game from "../models/Games.js";
 
-// Define schemas inline to avoid import issues
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  avatar: { type: String, default: "/images/user-solid.svg" },
-  status: {
-    type: String,
-    enum: ["online", "offline", "in match"],
-    default: "offline",
-  },
-  lastSeen: { type: Date, default: Date.now },
-  tokenInvalidatedAt: { type: Date, default: null },
-  stats: {
-    totalGames: { type: Number, default: 0 },
-    gamesWon: { type: Number, default: 0 },
-    gamesLost: { type: Number, default: 0 },
-    gamesDraw: { type: Number, default: 0 },
-    winStreak: { type: Number, default: 0 },
-    bestStreak: { type: Number, default: 0 },
-    totalWordsGuessed: { type: Number, default: 0 },
-    averageGuessTime: { type: Number, default: 0 },
-    level: { type: Number, default: 1 },
-    experience: { type: Number, default: 0 },
-  },
-}, { timestamps: true });
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/guess_the_word_game";
+const MOCK_OPPONTS = [
+  { username: "Alex_Player", email: "alex@test.com", password: "test123" },
+  { username: "Sarah_Gamer", email: "sarah@test.com", password: "test123" },
+  { username: "Mike_Pro", email: "mike@test.com", password: "test123" },
+  { username: "Emma_Word", email: "emma@test.com", password: "test123" }
+];
 
-const gameSchema = new mongoose.Schema({
-  gameId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  players: [
-    {
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-      score: { type: Number, default: 0 },
-      wordsGuessed: { type: Number, default: 0 },
-      averageGuessTime: { type: Number, default: 0 },
-      isReady: { type: Boolean, default: false },
-      joinedAt: { type: Date, default: Date.now },
-    },
-  ],
-  gameSettings: {
-    maxPlayers: { type: Number, default: 2 },
-    roundsToWin: { type: Number, default: 3 },
-    timePerRound: { type: Number, default: 60 },
-    difficulty: {
-      type: String,
-      enum: ["easy", "medium", "hard"],
-      default: "medium",
-    },
-    category: { type: String, default: "general" },
-  },
-  status: {
-    type: String,
-    enum: ["waiting", "active", "paused", "completed", "abandoned"],
-    default: "waiting",
-  },
-  currentRound: { type: Number, default: 1 },
-  currentTurn: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-  },
-  currentWord: {
-    word: String,
-    hint: String,
-    category: String,
-    difficulty: String,
-    guessedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    guessTime: Number,
-    attempts: Number,
-  },
-  rounds: [
-    {
-      roundNumber: Number,
-      word: String,
-      hint: String,
-      winner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      guessTime: Number,
-      attempts: Number,
-      completedAt: Date,
-    },
-  ],
-  winner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  finalScores: [
-    {
-      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      score: Number,
-      wordsGuessed: Number,
-      averageTime: Number,
-    },
-  ],
-  // Additional fields for your frontend
-  targetWord: String,
-  word: String,
-  createdAt: { type: Date, default: Date.now },
-  startedAt: Date,
-  completedAt: Date,
-  updatedAt: { type: Date, default: Date.now },
-});
-
-const User = mongoose.model('User', userSchema);
-const Game = mongoose.model('Game', gameSchema);
-
-// Sample words for different difficulties
-const WORDS_BY_DIFFICULTY = {
-  easy: [
-    { word: 'CAT', hint: 'A furry pet that meows', category: 'animals' },
-    { word: 'DOG', hint: 'Man\'s best friend', category: 'animals' },
-    { word: 'SUN', hint: 'Bright star in our solar system', category: 'nature' },
-    { word: 'BOOK', hint: 'You read this', category: 'objects' },
-    { word: 'TREE', hint: 'Tall plant with branches', category: 'nature' },
-    { word: 'FISH', hint: 'Swims in water', category: 'animals' },
-    { word: 'MOON', hint: 'Shines at night', category: 'nature' },
-    { word: 'BALL', hint: 'Round toy you can throw', category: 'objects' }
-  ],
-  medium: [
-    { word: 'COMPUTER', hint: 'Electronic device for processing data', category: 'technology' },
-    { word: 'GUITAR', hint: 'Six-stringed musical instrument', category: 'music' },
-    { word: 'PIZZA', hint: 'Italian dish with cheese and toppings', category: 'food' },
-    { word: 'RAINBOW', hint: 'Colorful arc in the sky after rain', category: 'nature' },
-    { word: 'BUTTERFLY', hint: 'Colorful insect with large wings', category: 'animals' },
-    { word: 'MOUNTAIN', hint: 'Very tall natural elevation', category: 'nature' },
-    { word: 'TELEPHONE', hint: 'Device used for long-distance communication', category: 'technology' },
-    { word: 'ELEPHANT', hint: 'Large gray animal with a trunk', category: 'animals' }
-  ],
-  hard: [
-    { word: 'ENCYCLOPEDIA', hint: 'Comprehensive reference work', category: 'education' },
-    { word: 'PHILOSOPHY', hint: 'Study of fundamental nature of reality', category: 'education' },
-    { word: 'ARCHITECTURE', hint: 'Art and science of designing buildings', category: 'profession' },
-    { word: 'MICROSCOPE', hint: 'Instrument for viewing very small objects', category: 'science' },
-    { word: 'ORCHESTRA', hint: 'Large ensemble of musicians', category: 'music' },
-    { word: 'LABORATORY', hint: 'Facility equipped for scientific experiments', category: 'science' },
-    { word: 'MATHEMATICS', hint: 'Science of numbers and shapes', category: 'education' },
-    { word: 'PSYCHOLOGY', hint: 'Study of mind and behavior', category: 'education' }
-  ]
-};
-
-// Utility functions
-function getRandomElement(array) {
-  return array[Math.floor(Math.random() * array.length)];
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function getRandomDate(monthsBack) {
-  const now = new Date();
-  const pastDate = new Date();
-  pastDate.setMonth(now.getMonth() - monthsBack);
-  
-  const randomTime = pastDate.getTime() + Math.random() * (now.getTime() - pastDate.getTime());
-  return new Date(randomTime);
+function makeGameId(i = 0) {
+  return `test-game-${Date.now()}-${i}-${Math.floor(Math.random() * 1e6)}`;
 }
 
-function getRandomGameDuration() {
-  return Math.floor(Math.random() * 10 + 5) * 60 * 1000; // 5-15 minutes
-}
+async function main() {
+  console.log("Connecting to MongoDB...");
+  await mongoose.connect(MONGODB_URI);
+  console.log("Connected to MongoDB");
 
-function getRandomGuessTime() {
-  return Math.floor(Math.random() * 170 + 10); // 10-180 seconds
-}
-
-function getRandomAttempts() {
-  return Math.floor(Math.random() * 8 + 1);
-}
-
-async function seedGameData() {
   try {
-    console.log('🌱 Starting game data seeding...');
-
-    // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
-
-    // Get all users
-    const users = await User.find({});
-    console.log(`Found ${users.length} users`);
-    
-    if (users.length < 1) {
-      console.log('❌ No users found in database. Please create a user first.');
-      process.exit(1);
+    const user = await User.findOne({ username: "Bob" });
+    if (!user) {
+      console.error("❌ No base user found: Bob");
+      return;
     }
+    console.log("Found user:", user.username);
 
-    // If only one user, create a test opponent
-    if (users.length < 2) {
-      console.log('📝 Creating test opponent...');
-      
-      const testOpponent = new User({
-        username: 'TestBot',
-        email: 'testbot@example.com',
-        password: 'password123',
-        stats: {
-          totalGames: 25,
-          gamesWon: 12,
-          gamesLost: 10,
-          gamesDraw: 3,
-          winStreak: 2,
-          bestStreak: 5,
-          level: 3,
-          experience: 750
+    // find opponents (exclude current user)
+    let opponents = await User.find({ _id: { $ne: user._id } });
+
+    // create mock opponents if none
+    if (!Array.isArray(opponents) || opponents.length === 0) {
+      console.log("No other users found, creating mock opponents...");
+      for (const m of MOCK_OPPONTS) {
+        if (!m?.username || !m?.email) {
+          console.warn("Skipping invalid mock opponent:", m);
+          continue;
         }
-      });
-      
-      await testOpponent.save();
-      users.push(testOpponent);
-      console.log('✅ Created test opponent');
+        const exists = await User.findOne({ $or: [{ username: m.username }, { email: m.email }] });
+        if (exists) opponents.push(exists);
+        else {
+          const created = new User(m);
+          await created.save();
+          opponents.push(created);
+        }
+      }
     }
 
-    // Clear existing games (optional)
-    const existingGamesCount = await Game.countDocuments();
-    if (existingGamesCount > 0) {
-      console.log(`🗑️ Found ${existingGamesCount} existing games. Clearing...`);
-      await Game.deleteMany({});
-      console.log('✅ Cleared existing games');
+    console.log(`Total opponents available: ${opponents.length}`);
+
+    // Build games array (one or more games per opponent)
+    const gamesToCreate = [];
+    let i = 0;
+    for (const opp of opponents) {
+      // create a few games per opponent (random 1..3)
+      const count = randomInt(1, 3);
+      for (let j = 0; j < count; j++, i++) {
+        const p1Score = randomInt(0, 5);
+        const p2Score = randomInt(0, 5);
+
+        const createdAt = new Date(Date.now() - randomInt(0, 180) * 24 * 60 * 60 * 1000); // up to ~180 days ago
+
+        const gameDoc = {
+          gameId: makeGameId(i),
+          player1: user._id,
+          player2: opp._id,
+          player1Score: p1Score,
+          player2Score: p2Score,
+          players: [
+            { user: user._id, score: p1Score },
+            { user: opp._id, score: p2Score }
+          ],
+          winner: p1Score === p2Score ? null : (p1Score > p2Score ? user._id : opp._id),
+          status: "completed",
+          createdAt,
+          startedAt: createdAt,
+          completedAt: new Date(createdAt.getTime() + randomInt(2, 10) * 60 * 1000),
+          meta: { seeded: true }
+        };
+
+        gamesToCreate.push(gameDoc);
+      }
     }
 
-    const currentUser = users[0]; // First user
-    const opponents = users.slice(1); // Other users as opponents
+    if (gamesToCreate.length === 0) {
+      console.warn("No games were built. Aborting.");
+      return;
+    }
 
-    const gamesToCreate = 35;
-    console.log(`🎮 Creating ${gamesToCreate} test games for user: ${currentUser.username}`);
+    // Insert games (ordered:false so duplicates won't abort all)
+    const inserted = await Game.insertMany(gamesToCreate, { ordered: false });
+    console.log(`✅ Created ${inserted.length} test games`);
 
-    const games = [];
+    // Approach B: recompute stats for all users from the Games collection
+    console.log("Recomputing stats from Games collection (Approach B)...");
+    const agg = await Game.aggregate([
+      { $match: { status: "completed" } },
+      { $unwind: "$players" },
+      {
+        $group: {
+          _id: "$players.user",
+          totalGames: { $sum: 1 },
+          totalWordsGuessed: { $sum: { $ifNull: ["$players.wordsGuessed", 0] } },
+          wins: { $sum: { $cond: [{ $eq: ["$winner", "$players.user"] }, 1, 0] } },
+          draws: { $sum: { $cond: [{ $eq: ["$winner", null] }, 1, 0] } },
+          losses: {
+            $sum: {
+              $cond: [
+                { $and: [{ $ne: ["$winner", null] }, { $ne: ["$winner", "$players.user"] }] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
 
-    for (let i = 0; i < gamesToCreate; i++) {
-      const opponent = getRandomElement(opponents);
-      const difficulty = getRandomElement(['easy', 'medium', 'hard']);
-      const wordData = getRandomElement(WORDS_BY_DIFFICULTY[difficulty]);
-      
-      // Generate outcome: 45% win, 30% lose, 25% draw
-      const outcomeRoll = Math.random();
-      let winner = null;
-      let currentUserScore = 0;
-      let opponentScore = 0;
-
-      if (outcomeRoll < 0.45) {
-        // Current user wins
-        winner = currentUser._id;
-        currentUserScore = Math.floor(Math.random() * 3 + 3); // 3-5 points
-        opponentScore = Math.floor(Math.random() * currentUserScore); // 0 to currentUserScore-1
-      } else if (outcomeRoll < 0.75) {
-        // Opponent wins
-        winner = opponent._id;
-        opponentScore = Math.floor(Math.random() * 3 + 3); // 3-5 points
-        currentUserScore = Math.floor(Math.random() * opponentScore); // 0 to opponentScore-1
+    // --- FIX: construct ObjectId with `new` only when needed ---
+    const bulkOps = agg.map(r => {
+      // r._id may already be an ObjectId or a string — normalize safely
+      let targetId = r._id;
+      if (typeof r._id === "string") {
+        // create a new ObjectId instance from string id
+        targetId = new mongoose.Types.ObjectId(r._id);
       } else {
-        // Draw
-        const drawScore = Math.floor(Math.random() * 3 + 2); // 2-4 points each
-        currentUserScore = drawScore;
-        opponentScore = drawScore;
+        // leave as-is (it's probably already an ObjectId)
+        targetId = r._id;
       }
 
-      const completedAt = getRandomDate(6); // Games within last 6 months
-      const gameDuration = getRandomGameDuration();
-      const startedAt = new Date(completedAt.getTime() - gameDuration);
+      const totalGames = r.totalGames || 0;
+      const wins = r.wins || 0;
+      const losses = r.losses || 0;
+      const draws = r.draws || 0;
+      const totalWordsGuessed = r.totalWordsGuessed || 0;
+      const level = Math.floor(totalGames / 5) + 1;
+      const experience = (wins * 100) + (draws * 50) + (losses * 20);
 
-      const game = {
-        gameId: `test_game_${Date.now()}_${i}`,
-        players: [
-          {
-            user: currentUser._id,
-            score: currentUserScore,
-            wordsGuessed: currentUserScore,
-            averageGuessTime: getRandomGuessTime(),
-            isReady: true,
-            joinedAt: startedAt
-          },
-          {
-            user: opponent._id,
-            score: opponentScore,
-            wordsGuessed: opponentScore,
-            averageGuessTime: getRandomGuessTime(),
-            isReady: true,
-            joinedAt: startedAt
+      return {
+        updateOne: {
+          filter: { _id: targetId },
+          update: {
+            $set: {
+              "stats.totalGames": totalGames,
+              "stats.gamesWon": wins,
+              "stats.gamesLost": losses,
+              "stats.gamesDraw": draws,
+              "stats.totalWordsGuessed": totalWordsGuessed,
+              "stats.level": level,
+              "stats.experience": experience
+            }
           }
-        ],
-        gameSettings: {
-          maxPlayers: 2,
-          roundsToWin: 5,
-          timePerRound: 60,
-          difficulty: difficulty,
-          category: wordData.category
-        },
-        status: 'completed',
-        currentRound: Math.max(currentUserScore, opponentScore) || 1,
-        currentWord: {
-          word: wordData.word,
-          hint: wordData.hint,
-          category: wordData.category,
-          difficulty: difficulty,
-          guessedBy: winner,
-          guessTime: getRandomGuessTime(),
-          attempts: getRandomAttempts()
-        },
-        rounds: [
-          {
-            roundNumber: 1,
-            word: wordData.word,
-            hint: wordData.hint,
-            winner: winner,
-            guessTime: getRandomGuessTime(),
-            attempts: getRandomAttempts(),
-            completedAt: completedAt
-          }
-        ],
-        winner: winner,
-        finalScores: [
-          {
-            user: currentUser._id,
-            score: currentUserScore,
-            wordsGuessed: currentUserScore,
-            averageTime: getRandomGuessTime()
-          },
-          {
-            user: opponent._id,
-            score: opponentScore,
-            wordsGuessed: opponentScore,
-            averageTime: getRandomGuessTime()
-          }
-        ],
-        // Additional fields your frontend expects
-        targetWord: wordData.word,
-        word: wordData.word,
-        createdAt: startedAt,
-        startedAt: startedAt,
-        completedAt: completedAt,
-        updatedAt: completedAt
+        }
       };
+    });
 
-      games.push(game);
+    if (bulkOps.length > 0) {
+      const res = await User.bulkWrite(bulkOps);
+      console.log(`✅ Recomputed & updated stats for ${bulkOps.length} users`);
+    } else {
+      console.log("No completed games found — no stats updated.");
     }
-
-    // Insert all games
-    console.log('💾 Inserting games into database...');
-    const insertedGames = await Game.insertMany(games);
-    console.log(`✅ Successfully created ${insertedGames.length} games`);
-
-    // Update user stats
-    console.log('📊 Updating user statistics...');
-    const userGames = insertedGames;
-
-    const wins = userGames.filter(game => 
-      game.winner && game.winner.toString() === currentUser._id.toString()
-    ).length;
-
-    const losses = userGames.filter(game => 
-      game.winner && game.winner.toString() !== currentUser._id.toString()
-    ).length;
-
-    const draws = userGames.filter(game => !game.winner).length;
-
-    const userStats = {
-      totalGames: userGames.length,
-      gamesWon: wins,
-      gamesLost: losses,
-      gamesDraw: draws,
-      winStreak: Math.floor(Math.random() * 5 + 1),
-      bestStreak: Math.floor(Math.random() * 8 + 5),
-      totalWordsGuessed: userGames.reduce((total, game) => {
-        const userPlayer = game.players.find(p => p.user.toString() === currentUser._id.toString());
-        return total + (userPlayer ? userPlayer.wordsGuessed : 0);
-      }, 0),
-      averageGuessTime: Math.floor(Math.random() * 60 + 30),
-      level: Math.floor(wins / 5) + 1, // Level up every 5 wins
-      experience: wins * 50 + draws * 15
-    };
-
-    await User.findByIdAndUpdate(currentUser._id, { 
-      $set: { stats: userStats }
-    });
-
-    console.log('\n📊 Seeding Summary:');
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`👤 User: ${currentUser.username}`);
-    console.log(`🎮 Total games: ${userStats.totalGames}`);
-    console.log(`🏆 Games won: ${userStats.gamesWon} (${((userStats.gamesWon/userStats.totalGames)*100).toFixed(1)}%)`);
-    console.log(`😔 Games lost: ${userStats.gamesLost}`);
-    console.log(`🤝 Games drawn: ${userStats.gamesDraw}`);
-    console.log(`📈 Current level: ${userStats.level}`);
-    console.log(`⚡ Experience: ${userStats.experience}`);
-
-    // Show monthly distribution
-    const monthlyStats = {};
-    userGames.forEach(game => {
-      const month = game.completedAt.toLocaleDateString('en-US', { month: 'short' });
-      if (!monthlyStats[month]) {
-        monthlyStats[month] = { wins: 0, losses: 0, draws: 0 };
-      }
-      
-      if (game.winner) {
-        if (game.winner.toString() === currentUser._id.toString()) {
-          monthlyStats[month].wins++;
-        } else {
-          monthlyStats[month].losses++;
-        }
-      } else {
-        monthlyStats[month].draws++;
-      }
-    });
-
-    console.log('\n📅 Monthly Performance:');
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    Object.entries(monthlyStats)
-      .sort(([a], [b]) => new Date(`${a} 1, 2024`) - new Date(`${b} 1, 2024`))
-      .forEach(([month, stats]) => {
-        const total = stats.wins + stats.losses + stats.draws;
-        const winRate = total > 0 ? ((stats.wins / total) * 100).toFixed(1) : 0;
-        console.log(`${month.padEnd(3)}: ${String(stats.wins).padStart(2)}W ${String(stats.losses).padStart(2)}L ${String(stats.draws).padStart(2)}D (${winRate}% win rate)`);
-      });
-
-    console.log('\n🎉 Game data seeding completed successfully!');
-    console.log('📱 You can now refresh your dashboard to see:');
-    console.log('   ✅ Updated match history');
-    console.log('   ✅ Performance chart with monthly data');
-    console.log('   ✅ Updated user statistics');
-
-  } catch (error) {
-    console.error('❌ Error seeding game data:', error);
-    process.exit(1);
+  } catch (err) {
+    console.error("❌ Error creating test games:", err && err.stack ? err.stack : err);
   } finally {
     await mongoose.disconnect();
-    console.log('✅ Disconnected from MongoDB');
-    process.exit(0);
+    console.log("Disconnected from MongoDB");
   }
 }
 
-// Run the seeder
-seedGameData();
+main();
