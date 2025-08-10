@@ -8,7 +8,8 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
-import friendRoutes from "./routes/friends.js";
+import friendPageRouter from "./routes/friendsPage.js";
+import friendApiRouter from "./routes/friendsApi.js";
 import gameRoutes from "./routes/games.js";
 import path from "path";
 import helmet from "helmet";
@@ -102,7 +103,8 @@ app.use(express.static(join(__dirname, "public")));
 // Routes
 app.use("/auth", authRoutes);
 app.use("/dashboard", dashboardRoutes);
-app.use("/api/friends", friendRoutes);
+app.use("/friends", friendPageRouter);        // HTML pages: /friends
+app.use("/api/friends", friendApiRouter);     // JSON API: /api/friends
 app.use("/api/games", gameRoutes);
 
 // 404 handler
