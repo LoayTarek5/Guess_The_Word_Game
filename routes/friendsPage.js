@@ -6,7 +6,8 @@ const router = express.Router();
 
 router.get("/", requireAuth, (req, res) => {
   res.render("friends", {
-    page: "friends"
+    pageTitle: "Friends",
+    page: "friends",
   });
 });
 
