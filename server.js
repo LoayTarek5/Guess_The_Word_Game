@@ -10,7 +10,8 @@ import authRoutes from "./routes/auth.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import friendPageRouter from "./routes/friendsPage.js";
 import friendApiRouter from "./routes/friendsApi.js";
-import gameRoutes from "./routes/games.js";
+import matchHistoryPageRouter from "./routes/matchHistoryPage.js";
+import matchHistoryApiRouter from "./routes/matchHistoryApi.js";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
@@ -102,11 +103,14 @@ app.use(express.static(join(__dirname, "public")));
 
 // Routes
 app.use("/auth", authRoutes);
+
 app.use("/dashboard", dashboardRoutes);
+
 app.use("/friends", friendPageRouter);        // HTML pages: /friends
 app.use("/api/friends", friendApiRouter);     // JSON API: /api/friends
-app.use("/api/games", gameRoutes);
 
+app.use("/matchHistory", matchHistoryPageRouter);
+app.use("/api/matchHistory", matchHistoryApiRouter);
 // 404 handler
 app.use(notFound);
 
