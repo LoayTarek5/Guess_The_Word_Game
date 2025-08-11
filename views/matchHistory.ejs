@@ -1,0 +1,14 @@
+<div class="main-section">
+  <section class="matches-section">
+    <h3>Recent Matches</h3>
+    <div class="matches-content"></div>
+  </section>
+</div>
+<script src="js/main.js"></script>
+<script src="js/matchHistory.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    window.mainUtils.initializeCommon();
+    window.matchHistoryUtils.initializeMatchHistory();
+  });
+</script>
