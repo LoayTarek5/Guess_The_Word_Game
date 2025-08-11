@@ -1,0 +1,20 @@
+<div class="main-section">
+  <section class="friends-section">
+    <div class="header-friend">
+      <h3>Friends</h3>
+      <button class="add-friend-btn">
+        <i class="fa-solid fa-user-plus"></i>
+        Add Friend
+      </button>
+    </div>
+    <div class="friend-content"></div>
+  </section>
+</div>
+<script src="js/main.js"></script>
+<script src="js/friends.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        window.mainUtils.initializeCommon();
+        window.friendsUtils.initializeFriends();
+    });
+</script>
