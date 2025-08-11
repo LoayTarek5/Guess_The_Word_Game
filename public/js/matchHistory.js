@@ -1,7 +1,7 @@
 async function loadMatchHistory(limit = 10, page = 1) {
   try {
     const response = await fetch(
-      `/api/games/history?limit=${limit}&page=${page}`,
+      `/api/matchHistory/history?limit=${limit}&page=${page}`,
       {
         method: "GET",
         credentials: "include",
