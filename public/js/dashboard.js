@@ -40,7 +40,7 @@ async function initializePerformanceChart() {
       chartContainer.appendChild(loadingDiv);
     }
     // Fetch real performance data
-    const response = await fetch("/api/games/performance?months=6", {
+    const response = await fetch("/api/matchHistory/performance?months=6", {
       credentials: "include",
     });
 
