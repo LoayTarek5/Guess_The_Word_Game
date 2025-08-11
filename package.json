@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server",
     "dev": "node --watch --env-file=.env server",
-    "seed": "node scripts/createTestGames.js"
+    "seedGames": "node scripts/createTestGames.js",
+    "seedFriends": "node scripts/createTestFriends.js"
   },
   "repository": {
     "type": "git",
