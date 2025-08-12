@@ -23,60 +23,92 @@ class GameController {
 
       console.log(`Found ${games.length} games`); // Debug log
 
-      const matchHistory = games.map((match) => {
-        const currUser = match.players.find(
-          (player) => player.user._id.toString() === userId
-        );
-        const opponent = match.players.find(
-          (player) => player.user._id.toString() !== userId
-        );
-
-        let result = "Draw";
-        let yourScore = currUser?.score || 0;
-        let opponentScore = opponent?.score || 0;
-
-        if (match?.winner) {
-          result = match.winner._id.toString() === userId ? "Won" : "Lost";
-        } else if (yourScore > opponentScore) {
-          result = "Won";
-        } else if (yourScore < opponentScore) {
-          result = "Lost";
+      const validGames = games.filter((game) => {
+        const hasPlayers =
+          game.players &&
+          game.players.length >= 2 &&
+          game.players.every((player) => player.user && player.user._id);
+        if (!hasPlayers) {
+          console.warn(`Game ${game._id} has missing player data, skipping`);
         }
 
-        // Use optional chaining and provide fallbacks for missing data
-        const word = match.currentWord?.word || match.targetWord || match.word || "UNKNOWN";
-        
-        return {
-          id: match._id,
-          opponentAvatar: opponent?.user?.avatar || "/images/user-solid.svg",
-          opponentDisplay: `Vs ${opponent?.user?.username || "Unknown"}`,
-          result: {
-            status: result.toLowerCase(),
-            display: result,
-          },
-          scoreDisplay: `${yourScore} - ${opponentScore}`,
-          yourScore,
-          opponentScore,
-          date: this.formatDate(match.completedAt),
-          completedAt: match.completedAt,
-          duration: this.formatDuration(match.completedAt, match.startedAt),
-          durationDisplay: this.formatDuration(
-            match.completedAt,
-            match.startedAt
-          ),
-          word: word,
-          wordDisplay: `Word: ${word.toUpperCase()}`,
-          guesses: currUser?.attempts || currUser?.guesses?.length || Math.floor(Math.random() * 5 + 1), // Fallback for missing guesses
-          guessesDisplay: `${currUser?.attempts || currUser?.guesses?.length || Math.floor(Math.random() * 5 + 1)} guesses`,
-          opponent: {
-            id: opponent?.user?._id,
-            username: opponent?.user?.username || "Unknown",
-            avatar: opponent?.user?.avatar || "/images/user-solid.svg",
-          },
-          timeAgo: this.getTimeAgo(match.completedAt),
-          gameSettings: match.gameSettings,
-        };
+        return hasPlayers;
       });
+
+      const matchHistory = validGames
+        .map((match) => {
+          const currUser = match.players.find(
+            (player) => player.user._id.toString() === userId
+          );
+          const opponent = match.players.find(
+            (player) => player.user._id.toString() !== userId
+          );
+
+          if (!currUser || !opponent) {
+            console.warn(
+              `Game ${match._id} missing current user or opponent, skipping`
+            );
+            return null;
+          }
+
+          let result = "Draw";
+          let yourScore = currUser?.score || 0;
+          let opponentScore = opponent?.score || 0;
+
+          if (match?.winner) {
+            result = match.winner._id.toString() === userId ? "Won" : "Lost";
+          } else if (yourScore > opponentScore) {
+            result = "Won";
+          } else if (yourScore < opponentScore) {
+            result = "Lost";
+          }
+
+          // Use optional chaining and provide fallbacks for missing data
+          const word =
+            match.currentWord?.word ||
+            match.targetWord ||
+            match.word ||
+            "UNKNOWN";
+
+          return {
+            id: match._id,
+            opponentAvatar: opponent?.user?.avatar || "/images/user-solid.svg",
+            opponentDisplay: `Vs ${opponent?.user?.username || "Unknown"}`,
+            result: {
+              status: result.toLowerCase(),
+              display: result,
+            },
+            scoreDisplay: `${yourScore} - ${opponentScore}`,
+            yourScore,
+            opponentScore,
+            date: this.formatDate(match.completedAt),
+            completedAt: match.completedAt,
+            duration: this.formatDuration(match.completedAt, match.startedAt),
+            durationDisplay: this.formatDuration(
+              match.completedAt,
+              match.startedAt
+            ),
+            word: word,
+            wordDisplay: `Word: ${word.toUpperCase()}`,
+            guesses:
+              currUser?.attempts ||
+              currUser?.guesses?.length ||
+              Math.floor(Math.random() * 5 + 1), // Fallback for missing guesses
+            guessesDisplay: `${
+              currUser?.attempts ||
+              currUser?.guesses?.length ||
+              Math.floor(Math.random() * 5 + 1)
+            } guesses`,
+            opponent: {
+              id: opponent?.user?._id,
+              username: opponent?.user?.username || "Unknown",
+              avatar: opponent?.user?.avatar || "/images/user-solid.svg",
+            },
+            timeAgo: this.getTimeAgo(match.completedAt),
+            gameSettings: match.gameSettings,
+          };
+        })
+        .filter(Boolean);
 
       // Get total count for pagination
       const totalGames = await Games.countDocuments({
@@ -103,7 +135,8 @@ class GameController {
       res.status(500).json({
         success: false,
         message: "Failed to load match history",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -161,6 +194,14 @@ class GameController {
           const opponent = game.players.find(
             (p) => p.user.toString() !== userId
           );
+
+          // Skip if we can't find both players
+          if (!currentUser || !opponent) {
+            console.warn(
+              `Game ${game._id} missing player data in performance calculation`
+            );
+            return;
+          }
 
           let result = "draw";
           if (game.winner) {
