@@ -24,9 +24,23 @@ const friendshipSchema = new mongoose.Schema({
 friendshipSchema.index({ requester: 1, recipient: 1 }, { unique: true });
 
 // Pre-save middleware
-friendshipSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
+friendshipSchema.pre("save", async function (next) {
+  try {
+    const User = mongoose.model("User");
+    const requesterExists = await User.exists({ _id: this.requester });
+    const recipientExists = await User.exists({ _id: this.recipient });
+
+    if (!requesterExists) {
+      throw new Error("Requester user does not exist");
+    }
+    if (!recipientExists) {
+      throw new Error("Recipient user does not exist");
+    }
+    this.updatedAt = Date.now();
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 friendshipSchema.statics.getFriends = async function (userId) {
@@ -41,9 +55,9 @@ friendshipSchema.statics.getFriends = async function (userId) {
 friendshipSchema.statics.countFriends = async function (userId) {
   return await this.countDocuments({
     $or: [
-      { requester: userId, status: 'accepted' },
-      { recipient: userId, status: 'accepted' }
-    ]
+      { requester: userId, status: "accepted" },
+      { recipient: userId, status: "accepted" },
+    ],
   });
 };
 
@@ -61,14 +75,14 @@ friendshipSchema.statics.getSentRequests = async function (userId) {
   );
 };
 
-friendshipSchema.statics.isUserOnline = function(lastSeen, status) {
+friendshipSchema.statics.isUserOnline = function (lastSeen, status) {
   if (status === "online" || status === "in match") {
     return true;
   }
 
-  /* Consider online if last seen within 5 minutes
+  //Consider online if last seen within 5 minutes
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-  return new Date(lastSeen) > fiveMinutesAgo;*/
+  return new Date(lastSeen) > fiveMinutesAgo;
 };
 
 export default mongoose.model("Friendship", friendshipSchema);
