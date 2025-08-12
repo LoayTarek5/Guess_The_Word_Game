@@ -240,7 +240,7 @@ function displayPendingRequests(receivedRequests, sentRequests) {
   }
 }
 
-async function loadFriendsData() {
+async function loadFriendsData(friendsLimit = false) {
   const friendsContainer = document.querySelector(".friend-content");
 
   try {
@@ -281,7 +281,11 @@ async function loadFriendsData() {
               </div>
             `;
           } else {
+            if (!friendsLimit) {
+              document.querySelector(".header-friend h3").textContent = `Friends (${friends.length})`;
+            }
             friendsContainer.innerHTML = friends
+              .slice(0, friendsLimit ? 6 : friends.length)
               .map(
                 (friend) => `
               <div class="friend-group">
