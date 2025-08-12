@@ -421,24 +421,32 @@ aside#sidebar.active ~ .main-content {
   position: relative;
 }
 
-.friends-section {
+.dash-friends-section {
   background: white;
   border-radius: 12px;
   padding: 25px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #dee3ed;
 }
-.header-friend {
+
+.dash-friends-section .friends-section {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #dee3ed;
+}
+.dash-friends-section .header-friend {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.header-friend h3 {
+.dash-friends-section .header-friend h3 {
   font-size: 18px;
   font-weight: 600;
   color: #212529;
 }
-.add-friend-btn {
+.dash-friends-section .add-friend-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -451,30 +459,30 @@ aside#sidebar.active ~ .main-content {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.add-friend-btn:hover {
+.dash-friends-section .add-friend-btn:hover {
   background: #e9ecef;
   border-color: #adb5bd;
 }
-.add-friend-btn i {
+.dash-friends-section .add-friend-btn i {
   font-size: 12px;
 }
-.friend-content {
+.dash-friends-section .friend-content {
   display: flex;
   flex-direction: column;
   gap: 25px;
   margin-top: 15px;
 }
-.friend-group {
+.dash-friends-section .friend-group {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.friend-data {
+.dash-friends-section .friend-data {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.friend-avatar {
+.dash-friends-section .friend-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -482,7 +490,7 @@ aside#sidebar.active ~ .main-content {
   display: block;
   position: relative;
 }
-.friend-avatar::before {
+.dash-friends-section .friend-avatar::before {
   position: absolute;
   content: "";
   width: 8px;
@@ -492,43 +500,44 @@ aside#sidebar.active ~ .main-content {
   bottom: 3px;
   right: 2px;
 }
-.friend-avatar.offline::before {
+.dash-friends-section .friend-avatar.offline::before {
   background: #6c757d;
 }
-.friend-avatar.in-game::before {
+.dash-friends-section .friend-avatar.in-game::before {
   background: #ffc107;
 }
-.friend-info {
+.dash-friends-section .friend-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.friend-name {
+.dash-friends-section .friend-name {
   font-size: 15px;
   font-weight: 500;
   margin: 0px;
   color: #212529;
 }
-.status {
+.dash-friends-section .status {
   font-size: 12px;
   color: #6c757d;
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.friend-icons {
+.dash-friends-section .friend-icons {
   display: flex;
   gap: 12px;
 }
-.friend-icons i {
+.dash-friends-section .friend-icons i {
   color: #6c757d;
   font-size: 16px;
   cursor: pointer;
   transition: color 0.2s ease;
 }
-.friend-icons i:hover {
+.dash-friends-section .friend-icons i:hover {
   color: #495057;
 }
+
 @media (max-width: 768px) {
   .content-grid {
     grid-template-columns: 1fr;
@@ -540,6 +549,7 @@ aside#sidebar.active ~ .main-content {
     padding: 24px;
   }
 }
+
 .performance-section,
 .friends-section,
 .matches-section {
@@ -683,110 +693,6 @@ aside#sidebar.active ~ .main-content {
 }
 .match-status i {
   font-size: 10px;
-}
-
-.requests-container {
-  margin-bottom: 20px;
-}
-.requests-section,
-.sent-requests-section {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 15px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-.requests-section h4,
-.sent-requests-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 16px;
-}
-.request-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-.request-item:last-child {
-  border-bottom: none;
-}
-.request-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.request-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #e0e0e0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  overflow: hidden;
-}
-.request-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.request-details {
-  display: flex;
-  flex-direction: column;
-}
-.request-name {
-  margin: 0;
-  font-weight: 500;
-  font-size: 14px;
-}
-.request-level {
-  font-size: 12px;
-  color: #666;
-}
-.request-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.accept-btn,
-.decline-btn,
-.cancel-btn {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s;
-}
-.accept-btn {
-  background: #28a745;
-  color: white;
-}
-.accept-btn:hover {
-  background: #218838;
-}
-.decline-btn,
-.cancel-btn {
-  background: #dc3545;
-  color: white;
-}
-.decline-btn:hover,
-.cancel-btn:hover {
-  background: #c82333;
-}
-.pending-status {
-  font-size: 12px;
-  color: #6c757d;
-  font-style: italic;
-}
-.request-badge {
-  animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
