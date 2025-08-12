@@ -61,7 +61,7 @@
         <canvas id="performance-chart"></canvas>
       </div>
     </section>
-    <section class="friends-section">
+    <section class="dash-friends-section">
       <div class="header-friend">
         <h3>Friends</h3>
         <button class="add-friend-btn">
@@ -74,22 +74,21 @@
   </div>
   <section class="matches-section">
     <h3>Recent Matches</h3>
-    <div class="matches-content">
-    </div>
+    <div class="matches-content"></div>
   </section>
 </div>
 
 <!-- <script type="module" src="/js/dashboard.js"></script> -->
 <script src="js/main.js"></script>
-    <script src="js/friends.js"></script>
-    <script src="js/matchHistory.js"></script>
-    <script src="js/dashboard.js"></script>
-    
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            window.mainUtils.initializeCommon();
-            window.dashboardUtils.initializeDashboard();
-            window.friendsUtils.initializeFriends();
-            window.matchHistoryUtils.initializeMatchHistory();
-        });
-    </script>
+<script src="js/friends.js"></script>
+<script src="js/matchHistory.js"></script>
+<script src="js/dashboard.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    window.mainUtils.initializeCommon();
+    window.dashboardUtils.initializeDashboard();
+    window.friendsUtils.loadFriendsData(true);
+    window.matchHistoryUtils.initializeMatchHistory();
+  });
+</script>
