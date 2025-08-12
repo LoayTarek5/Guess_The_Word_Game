@@ -9,21 +9,38 @@ class FriendController {
       const userId = req.user.userId;
       const friendsShips = await Friendship.getFriends(userId);
       // format friends's data
-      const friends = friendsShips.map((friendShip) => {
-        const friend =
-          friendShip.requester._id.toString() == userId
-            ? friendShip.recipient
-            : friendShip.requester;
-        return {
-          id: friend._id,
-          username: friend.username,
-          avatar: friend.avatar,
-          status: friend.status,
-          level: friend.stats?.level || 1,
-          lastSeen: friend.lastSeen,
-          isOnline: Friendship.isUserOnline(friend.lastSeen, friend.status),
-        };
-      });
+      const friends = friendsShips
+        .map((friendShip) => {
+          if (!friendShip.requester || !friendShip.recipient) {
+            console.warn(
+              `Friendship ${friendShip._id} has missing user data, skipping`
+            );
+            return null;
+          }
+
+          const friend =
+            friendShip.requester._id.toString() == userId
+              ? friendShip.recipient
+              : friendShip.requester;
+
+          if (!friend || !friend._id) {
+            console.warn(
+              `Friendship ${friendShip._id} has null friend data, skipping`
+            );
+            return null;
+          }
+
+          return {
+            id: friend._id,
+            username: friend.username,
+            avatar: friend.avatar,
+            status: friend.status,
+            level: friend.stats?.level || 1,
+            lastSeen: friend.lastSeen,
+            isOnline: Friendship.isUserOnline(friend.lastSeen, friend.status),
+          };
+        })
+        .filter(Boolean);
 
       // Sort friends: online first, then by username
       friends.sort((a, b) => {
@@ -185,6 +202,16 @@ class FriendController {
         });
       }
 
+      // Check if requester still exists
+      if (!friendship.requester) {
+        // Clean up orphaned friendship
+        await Friendship.deleteOne({ _id: friendship._id });
+        return res.status(404).json({
+          success: false,
+          message: "User who sent the request no longer exists",
+        });
+      }
+
       friendship.status = "accepted";
       await friendship.save();
 
@@ -223,6 +250,13 @@ class FriendController {
         });
       }
 
+      // Check if requester still exists before logging
+      if (friendship.requester) {
+        logger.info(
+          `Friend request declined: ${friendship.requester.username} -> ${req.user.username}`
+        );
+      }
+
       logger.info(
         `Friend request declined: ${friendship.requester.username} -> ${req.user.username}`
       );
@@ -249,29 +283,40 @@ class FriendController {
         Friendship.getPendingRequests(userId),
         Friendship.getSentRequests(userId),
       ]);
-      res.json({
-        success: true,
-        received: received.map((req) => ({
+
+      // Filter out requests with missing user data
+      const validReceived = received
+        .filter((req) => req.requester && req.requester._id)
+        .map((req) => ({
           id: req._id,
           from: {
             id: req.requester._id,
-            username: req.requester.username,
-            avatar: req.requester.avatar,
+            username: req.requester.username || "Unknown User",
+            avatar: req.requester.avatar || "/images/user-solid.svg",
             level: req.requester.stats?.level || 1,
           },
           createdAt: req.createdAt,
-        })),
-        sent: sent.map((req) => ({
+        }));
+
+      const validSent = sent
+        .filter((req) => req.recipient && req.recipient._id)
+        .map((req) => ({
           id: req._id,
           to: {
             id: req.recipient._id,
-            username: req.recipient.username,
-            avatar: req.recipient.avatar,
+            username: req.recipient.username || "Unknown User",
+            avatar: req.recipient.avatar || "/images/user-solid.svg",
             level: req.recipient.stats?.level || 1,
           },
           createdAt: req.createdAt,
-        })),
+        }));
+
+      res.json({
+        success: true,
+        received: validReceived,
+        sent: validSent,
       });
+      
     } catch (error) {
       logger.error("Get pending requests error:", error);
       res.status(500).json({
