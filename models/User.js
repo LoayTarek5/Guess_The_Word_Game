@@ -37,6 +37,38 @@ userSchema.pre("save", async function (next) {
   return next();
 });
 
+// Pre-remove middleware to cleanup friendships
+userSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
+  try {
+    const Friendship = mongoose.model('Friendship');
+    await Friendship.deleteMany({
+      $or: [
+        { requester: this._id },
+        { recipient: this._id }
+      ]
+    });
+    console.log(`Cleaned up friendships for deleted user: ${this.username}`);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Also handle findOneAndDelete
+userSchema.post('findOneAndDelete', async function(doc) {
+  if (doc) {
+    const Friendship = mongoose.model('Friendship');
+    await Friendship.deleteMany({
+      $or: [
+        { requester: doc._id },
+        { recipient: doc._id }
+      ]
+    });
+    console.log(`Cleaned up friendships for deleted user: ${doc.username}`);
+  }
+});
+
+
 userSchema.methods.comparePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
