@@ -15,8 +15,8 @@ const CLEAN_FRIENDSHIPS = true; // if true, delete existing friendships involvin
 
 function mkCandidate(idx) {
   return {
-    username: `seed_user_${Date.now()}_${idx}`,
-    email: `seed_user_${Date.now()}_${idx}@example.test`,
+    username: `user_${Date.now()}`,
+    email: `user_${Date.now()}@test.test`,
     password: "test123"
   };
 }
