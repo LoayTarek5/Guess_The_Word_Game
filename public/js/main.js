@@ -374,7 +374,6 @@ function setupCommonEventListeners() {
       // User returned to tab, refresh data
       console.log("User returned, refreshing data...");
       fetchUserDataFromServer();
-      loadFriendsData();
     }
   });
 
