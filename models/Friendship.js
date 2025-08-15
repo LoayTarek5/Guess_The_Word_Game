@@ -52,6 +52,40 @@ friendshipSchema.statics.getFriends = async function (userId) {
   }).populate("requester recipient", "username avatar status lastSeen stats");
 };
 
+friendshipSchema.statics.getFriendsPaginated = async function (userId, limit, skip) {
+  return await this.find({
+    $or: [
+      { requester: userId, status: "accepted" },
+      { recipient: userId, status: "accepted" },
+    ],
+  })
+  .populate("requester recipient", "username avatar status lastSeen stats")
+  .limit(limit)
+  .skip(skip);
+};
+
+friendshipSchema.statics.countOnlineFriends = async function (userId) {
+  const friendships = await this.find({
+    $or: [
+      { requester: userId, status: "accepted" },
+      { recipient: userId, status: "accepted" },
+    ],
+  }).populate("requester recipient", "username avatar status lastSeen stats");
+
+  let onlineCount = 0;
+  friendships.forEach((friendship) => {
+    const friend = friendship.requester._id.toString() === userId 
+      ? friendship.recipient 
+      : friendship.requester;
+    
+    if (friend && this.isUserOnline(friend.lastSeen, friend.status)) {
+      onlineCount++;
+    }
+  });
+
+  return onlineCount;
+};
+
 friendshipSchema.statics.countFriends = async function (userId) {
   return await this.countDocuments({
     $or: [
