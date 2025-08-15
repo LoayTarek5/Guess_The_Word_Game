@@ -316,7 +316,6 @@ class FriendController {
         received: validReceived,
         sent: validSent,
       });
-      
     } catch (error) {
       logger.error("Get pending requests error:", error);
       res.status(500).json({
@@ -358,6 +357,94 @@ class FriendController {
       res.status(500).json({
         success: false,
         message: "Failed to remove friend",
+      });
+    }
+  }
+
+  async paginationFriends(req, res) {
+    try {
+      const userId = req.user.userId;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 8;
+      const skip = (page - 1) * limit;
+
+      // Get total count first
+      const totalFriends = await Friendship.countFriends(userId);
+      // Get paginated friends
+      const friendsShips = await Friendship.getFriendsPaginated(
+        userId,
+        limit,
+        skip
+      );
+
+      // format friends's data
+      const friends = friendsShips
+        .map((friendShip) => {
+          if (!friendShip.requester || !friendShip.recipient) {
+            console.warn(
+              `Friendship ${friendShip._id} has missing user data, skipping`
+            );
+            return null;
+          }
+
+          const friend =
+            friendShip.requester._id.toString() == userId
+              ? friendShip.recipient
+              : friendShip.requester;
+
+          if (!friend || !friend._id) {
+            console.warn(
+              `Friendship ${friendShip._id} has null friend data, skipping`
+            );
+            return null;
+          }
+
+          return {
+            id: friend._id,
+            username: friend.username,
+            avatar: friend.avatar,
+            status: friend.status,
+            level: friend.stats?.level || 1,
+            lastSeen: friend.lastSeen,
+            isOnline: Friendship.isUserOnline(friend.lastSeen, friend.status),
+          };
+        })
+        .filter(Boolean);
+
+      // Sort friends: online first, then by username
+      friends.sort((a, b) => {
+        if (a.isOnline && !b.isOnline) return -1;
+        if (!a.isOnline && b.isOnline) return 1;
+        return a.username.localeCompare(b.username);
+      });
+
+      const totalPages = Math.ceil(totalFriends / limit);
+      const onlineFriends = await Friendship.countOnlineFriends(userId);
+
+      return res.json({
+        success: true,
+        friends,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalFriends,
+          friendsPerPage: limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+          startIndex: skip + 1,
+          endIndex: Math.min(skip + limit, totalFriends),
+        },
+        count: {
+          total: totalFriends,
+          online: onlineFriends,
+          showing: friends.length,
+        },
+      });
+    } catch (error) {
+      logger.error("Get friends error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to load friends",
       });
     }
   }
