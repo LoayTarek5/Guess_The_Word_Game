@@ -285,6 +285,7 @@ function setupDashboardEventListeners() {
         window.matchHistoryUtils.loadMatchHistory();
       }
       initializePerformanceChart();
+      window.friendsUtils.loadFriendsData(true);    
     }
   });
 
