@@ -1,3 +1,5 @@
+let currentFriendsPage = 1;
+
 async function addNewFriend() {
   const username = prompt("Enter username to add as friend:");
   if (!username || username.trim() === "") return;
@@ -37,7 +39,13 @@ async function removeFriend(userId, username) {
     const result = await response.json();
     if (result.success) {
       showNotification(result.message, "success");
-      loadFriendsData();
+      // Reload current page, but check if we need to go back a page
+      const friendGroups = document.querySelectorAll(".friend-group");
+      if (friendGroups.length === 1 && currentFriendsPage > 1) {
+        // If this was the last friend on the page and we're not on page 1
+        currentFriendsPage = currentFriendsPage - 1;
+      }
+      loadFriendsData(currentFriendsPage);
     } else {
       showNotification(result.message, "error");
     }
@@ -56,7 +64,7 @@ async function acceptFriend(userId, username) {
     const result = await response.json();
     if (result.success) {
       showNotification(`You are now friends with ${username}!`, "success");
-      loadFriendsData();
+      loadFriendsData(currentFriendsPage);
       loadPendingRequests();
     } else {
       showNotification(result.message, "error");
@@ -240,11 +248,11 @@ function displayPendingRequests(receivedRequests, sentRequests) {
   }
 }
 
-async function loadFriendsData(friendsLimit = false) {
+async function loadFriendsData(page = 1, limit = 8, isDashboard = false) {
   const friendsContainer = document.querySelector(".friend-content");
 
   try {
-    const response = await fetch("/api/friends", {
+    const response = await fetch(`/api/friends?page=${page}&limit=${limit}`, {
       credentials: "include",
     });
 
@@ -253,9 +261,9 @@ async function loadFriendsData(friendsLimit = false) {
 
       if (result.success) {
         const friends = result.friends;
-        // displayFriendsData(friends, friendsContainer);
-        
-        // Update friends count in stats (assuming you have these elements)
+        const pagination = result.pagination;
+
+        // Update friends count in stats
         const friendsOnlineElements = document.querySelectorAll(
           ".state-group .state-info p"
         );
@@ -270,9 +278,14 @@ async function loadFriendsData(friendsLimit = false) {
           friendsTotalSpan[3].textContent = `of ${result.count.total} friends`;
         }
 
+        // Update header
+        document.querySelector(
+          ".header-friend h3"
+        ).textContent = `Friends (${result.count.total})`;
+
         // Display friends
         if (friendsContainer) {
-          if (friends.length === 0) {
+          if (friends.length === 0 && pagination.currentPage === 1) {
             friendsContainer.innerHTML = `
               <div style="text-align: center; padding: 20px; color: #999;">
                 <i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
@@ -281,11 +294,7 @@ async function loadFriendsData(friendsLimit = false) {
               </div>
             `;
           } else {
-            if (!friendsLimit) {
-              document.querySelector(".header-friend h3").textContent = `Friends (${friends.length})`;
-            }
-            friendsContainer.innerHTML = friends
-              .slice(0, friendsLimit ? 6 : friends.length)
+            const friendsHTML = friends
               .map(
                 (friend) => `
               <div class="friend-group">
@@ -336,6 +345,13 @@ async function loadFriendsData(friendsLimit = false) {
             `
               )
               .join("");
+            // Create pagination HTML
+            if(!isDashboard) {
+              const paginationHTML = createPaginationHTML(pagination);
+              friendsContainer.innerHTML = friendsHTML + paginationHTML;
+            } else {
+              friendsContainer.innerHTML = friendsHTML;
+            }
           }
         }
       }
@@ -443,10 +459,10 @@ function startFriendsAutoRefresh() {
   window.mainUtils.autoRefreshFriendsInterval = setInterval(() => {
     if (!document.hidden) {
       console.log("Auto-refreshing friends data...");
-      loadFriendsData();
+      loadFriendsData(currentFriendsPage);
       loadPendingRequests();
     }
-  }, 15000);
+  }, 150000);
 }
 
 function setupFriendsEventListeners() {
@@ -458,6 +474,29 @@ function setupFriendsEventListeners() {
       const userId = e.target.dataset.userId;
       const username = e.target.dataset.username;
       removeFriend(userId, username);
+    }
+  });
+
+  // Handle pagination clicks
+  friendsContainer.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+
+    // Only handle pagination buttons
+    if (
+      btn.classList.contains("page-curr") ||
+      btn.classList.contains("page-slide") ||
+      btn.classList.contains("page-ellipsis")
+    ) {
+      e.preventDefault();
+
+      if (btn.disabled) return;
+
+      const page = parseInt(btn.dataset.page, 10);
+      if (page && page !== currentFriendsPage) {
+        currentFriendsPage = page;
+        loadFriendsData(page);
+      }
     }
   });
 
@@ -487,23 +526,177 @@ function setupFriendsEventListeners() {
   // Update visibility change handler to include friends data
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      loadFriendsData();
+      loadFriendsData(currentFriendsPage);
       loadPendingRequests();
     }
   });
 
   // Update online status handler to refresh friends data
   window.addEventListener("online", () => {
-    loadFriendsData();
+    loadFriendsData(currentFriendsPage);
     loadPendingRequests();
   });
 }
 
 function initializeFriends() {
-  loadFriendsData();
+  loadFriendsData(1);
   loadPendingRequests();
   setupFriendsEventListeners();
   startFriendsAutoRefresh();
+}
+
+function createPaginationHTML(pagination) {
+  if (pagination.totalPages <= 1) {
+    return "";
+  }
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalFriends,
+    hasPrevPage,
+    hasNextPage,
+  } = pagination;
+
+  // Generate page numbers with ellipsis logic
+  const getPageElements = () => {
+    const elements = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      // Show all pages if total pages <= maxVisible
+      for (let i = 1; i <= totalPages; i++) {
+        elements.push({ type: "page", number: i });
+      }
+    } else {
+      // Always show first page
+      elements.push({ type: "page", number: 1 });
+
+      let start, end;
+
+      if (currentPage <= 3) {
+        // Near beginning: 1 2 3 4 ... last
+        start = 2;
+        end = 4;
+        if (end < totalPages - 1) {
+          elements.push(
+            ...Array.from({ length: end - start + 1 }, (_, i) => ({
+              type: "page",
+              number: start + i,
+            }))
+          );
+          elements.push({ type: "ellipsis", id: "end" });
+        } else {
+          elements.push(
+            ...Array.from({ length: totalPages - 1 }, (_, i) => ({
+              type: "page",
+              number: i + 2,
+            }))
+          );
+        }
+      } else if (currentPage >= totalPages - 2) {
+        // Near end: 1 ... last-3 last-2 last-1 last
+        if (totalPages > 4) {
+          elements.push({ type: "ellipsis", id: "start" });
+          start = totalPages - 3;
+          elements.push(
+            ...Array.from({ length: 3 }, (_, i) => ({
+              type: "page",
+              number: start + i,
+            }))
+          );
+        } else {
+          elements.push(
+            ...Array.from({ length: totalPages - 2 }, (_, i) => ({
+              type: "page",
+              number: i + 2,
+            }))
+          );
+        }
+      } else {
+        // In middle: 1 ... current-1 current current+1 ... last
+        elements.push({ type: "ellipsis", id: "start" });
+        elements.push({ type: "page", number: currentPage - 1 });
+        elements.push({ type: "page", number: currentPage });
+        elements.push({ type: "page", number: currentPage + 1 });
+        elements.push({ type: "ellipsis", id: "end" });
+      }
+
+      // Always show last page (if not already included)
+      const lastElem = elements[elements.length - 1];
+      if (
+        !(
+          lastElem &&
+          lastElem.type === "page" &&
+          lastElem.number === totalPages
+        )
+      ) {
+        elements.push({ type: "page", number: totalPages });
+      }
+    }
+
+    return elements;
+  };
+
+  const pageElements = getPageElements();
+
+  return `
+    <nav class="friend-pagination">
+      <div class="pagination-info">
+        <p>Showing ${startIndex} to ${endIndex} of ${totalFriends} friends</p>
+      </div>
+      <ul class="pagination">
+        <li class="page-item">
+          <button class="page-slide back ${!hasPrevPage ? "disable" : ""}" 
+                  data-page="${currentPage - 1}" 
+                  ${!hasPrevPage ? "disabled" : ""}>
+            <i class="fa-solid fa-chevron-left"></i>
+            Back
+          </button>
+        </li>
+        ${pageElements
+          .map((element) => {
+            if (element.type === "page") {
+              return `
+              <li class="page-item">
+                <button class="page-curr ${
+                  element.number === currentPage ? "active" : ""
+                }" 
+                        data-page="${element.number}">
+                  ${element.number}
+                </button>
+              </li>
+            `;
+            } else {
+              // Ellipsis button: compute target page to jump to
+              const targetPage =
+                element.id === "start"
+                  ? Math.max(2, currentPage - 2)
+                  : Math.min(totalPages - 1, currentPage + 2);
+
+              return `
+              <li class="page-item">
+                <button class="page-ellipsis" data-page="${targetPage}" title="Jump to page ${targetPage}">
+                  <i class="fa-solid fa-ellipsis"></i>
+                </button>
+              </li>
+            `;
+            }
+          })
+          .join("")}
+        <li class="page-item">
+          <button class="page-slide next ${!hasNextPage ? "disable" : ""}" 
+                  data-page="${currentPage + 1}" 
+                  ${!hasNextPage ? "disabled" : ""}>
+            Next
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  `;
 }
 
 // Export functions for use in other modules
@@ -519,4 +712,5 @@ window.friendsUtils = {
   startFriendsAutoRefresh,
   setupFriendsEventListeners,
   initializeFriends,
+  currentFriendsPage: () => currentFriendsPage,
 };
