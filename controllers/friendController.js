@@ -3,69 +3,6 @@ import Friendship from "../models/Friendship.js";
 import logger from "../utils/logger.js";
 
 class FriendController {
-  // list Of All Friends
-  async getFriends(req, res) {
-    try {
-      const userId = req.user.userId;
-      const friendsShips = await Friendship.getFriends(userId);
-      // format friends's data
-      const friends = friendsShips
-        .map((friendShip) => {
-          if (!friendShip.requester || !friendShip.recipient) {
-            console.warn(
-              `Friendship ${friendShip._id} has missing user data, skipping`
-            );
-            return null;
-          }
-
-          const friend =
-            friendShip.requester._id.toString() == userId
-              ? friendShip.recipient
-              : friendShip.requester;
-
-          if (!friend || !friend._id) {
-            console.warn(
-              `Friendship ${friendShip._id} has null friend data, skipping`
-            );
-            return null;
-          }
-
-          return {
-            id: friend._id,
-            username: friend.username,
-            avatar: friend.avatar,
-            status: friend.status,
-            level: friend.stats?.level || 1,
-            lastSeen: friend.lastSeen,
-            isOnline: Friendship.isUserOnline(friend.lastSeen, friend.status),
-          };
-        })
-        .filter(Boolean);
-
-      // Sort friends: online first, then by username
-      friends.sort((a, b) => {
-        if (a.isOnline && !b.isOnline) return -1;
-        if (!a.isOnline && b.isOnline) return 1;
-        return a.username.localeCompare(b.username);
-      });
-
-      return res.json({
-        success: true,
-        friends,
-        count: {
-          total: friends.length,
-          online: friends.filter((friend) => friend.isOnline).length,
-        },
-      });
-    } catch (error) {
-      logger.error("Get friends error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to load friends",
-      });
-    }
-  }
-
   async sendFriendRequest(req, res) {
     try {
       // Friend's Username
@@ -361,7 +298,7 @@ class FriendController {
     }
   }
 
-  async paginationFriends(req, res) {
+  async getFriends(req, res) {
     try {
       const userId = req.user.userId;
       const page = parseInt(req.query.page) || 1;
@@ -370,6 +307,7 @@ class FriendController {
 
       // Get total count first
       const totalFriends = await Friendship.countFriends(userId);
+
       // Get paginated friends
       const friendsShips = await Friendship.getFriendsPaginated(
         userId,
@@ -377,7 +315,7 @@ class FriendController {
         skip
       );
 
-      // format friends's data
+      // Format friends data
       const friends = friendsShips
         .map((friendShip) => {
           if (!friendShip.requester || !friendShip.recipient) {
