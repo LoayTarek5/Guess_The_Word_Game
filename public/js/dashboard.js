@@ -1,6 +1,8 @@
 let performanceChartInstance = null; // store chart instance
 
-function displayUserStats(stats) {
+function displayUserStats() {
+  const stats = JSON.parse(localStorage.getItem("user")).stats;
+
   const totalGames = document.getElementById("total-games");
   const winRate = document.getElementById("win-rate");
   const numWinLose = document.getElementById("win-lose");
@@ -306,6 +308,7 @@ function initializeDashboard() {
   initializePerformanceChart();
   setupDashboardEventListeners();
   startDashboardAutoRefresh();
+  displayUserStats();
 }
 
 window.dashboardUtils = {
