@@ -6,7 +6,8 @@ class GameController {
   async getMatchHistory(req, res) {
     try {
       const userId = req.user.userId;
-      const { limit = 10, page = 1 } = req.query;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
 
       console.log(`Fetching match history for user: ${userId}`); // Debug log
@@ -18,8 +19,8 @@ class GameController {
         .populate("players.user", "avatar username stats")
         .populate("winner", "avatar username")
         .sort({ completedAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
+        .limit(limit)
+        .skip(skip);
 
       console.log(`Found ${games.length} games`); // Debug log
 
@@ -117,16 +118,23 @@ class GameController {
       });
 
       console.log(`Returning ${matchHistory.length} formatted matches`); // Debug log
-
+      const totalPages = Math.ceil(totalGames / limit);
       res.json({
         success: true,
         matchHistory,
         pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(totalGames / limit),
+          currentPage: page,
+          totalPages,
           totalGames,
-          hasNext: skip + games.length < totalGames,
-          hasPrev: page > 1,
+          matchesPerPage: limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+          startIndex: skip + 1,
+          endIndex: Math.min(skip + limit, totalGames),
+        },
+        count: {
+          total: totalGames,
+          showing: matchHistory.length,
         },
       });
     } catch (error) {
