@@ -1,4 +1,91 @@
+<head>
+  <link rel="stylesheet" href="/style/matchHistory.css" />
+</head>
 <div class="main-section">
+  <section class="state-cards">
+    <div class="state-group">
+      <div class="state-content">
+        <div class="state-info">
+          <h3>Total Games</h3>
+          <p id="total-games">0</p>
+          <span></span>
+        </div>
+        <i class="fa-solid fa-gamepad"></i>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-content">
+        <div class="state-info">
+          <h3>Win Rate</h3>
+          <p id="win-rate">0%</p>
+          <span id="win-lose">0W - 0L - 0D</span>
+        </div>
+        <i class="fa-solid fa-trophy"></i>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-content">
+        <div class="state-info">
+          <h3>Best Streak</h3>
+          <p id="streak">0</p>
+          <span>wins in a row</span>
+        </div>
+        <i class="fa-solid fa-arrow-trend-up"></i>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-content">
+        <div class="state-info">
+          <h3>Average Guesses</h3>
+          <p>0</p>
+          <span>per game</span>
+        </div>
+        <i class="fa-solid fa-chart-simple"></i>
+      </div>
+    </div>
+  </section>
+  
+  <section class="filter-matches">
+    <header class="header-filter">
+      <svg class="filter-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> 
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+      <h3>Filter Matches</h3>
+    </header>
+    <div class="search-container">
+      <div class="search-content">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input
+          type="text"
+          class="search-match"
+          placeholder="Search by opponent or word..."
+        />
+      </div>
+      <div class="dropdown-content">
+        <button class="dropdown" id="dropdownBtn">
+          <span>All Results</span><i class="fa-solid fa-angle-down"></i>
+        </button>
+        <div class="dropdown-menu" id="dropdownMenu">
+          <label class="dropdown-item selected">
+            <input type="radio" name="filter" value="all" checked />
+            <span>All Results</span>
+          </label>
+          <label class="dropdown-item">
+            <input type="radio" name="filter" value="wins" />
+            <span>Wins Only</span>
+          </label>
+          <label class="dropdown-item">
+            <input type="radio" name="filter" value="losses" />
+            <span>Losses Only</span>
+          </label>
+          <label class="dropdown-item">
+            <input type="radio" name="filter" value="draws" />
+            <span>Draws Only</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="matches-section">
     <h3>Recent Matches</h3>
     <div class="matches-content"></div>
