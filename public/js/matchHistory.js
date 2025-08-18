@@ -1,7 +1,9 @@
-async function loadMatchHistory(limit = 10, page = 1) {
+let currentMatchesPage = 1;
+
+async function loadMatchHistory(page = 1, limit = 10) {
   try {
     const response = await fetch(
-      `/api/matchHistory/history?limit=${limit}&page=${page}`,
+      `/api/matchHistory/history?page=${page}&limit=${limit}`,
       {
         method: "GET",
         credentials: "include",
@@ -11,7 +13,11 @@ async function loadMatchHistory(limit = 10, page = 1) {
     if (response.ok) {
       const result = await response.json();
       if (result.success) {
-        displayMatchHistory(result.matchHistory);
+        displayMatchHistory(result.matchHistory, result.pagination);
+        const header = document.querySelector(".matches-section h3");
+        if (header && result.count?.total) {
+          header.textContent = `Recent Matches (${result.count.total})`;
+        }
       } else {
         console.error("Failed to load match history:", result.message);
       }
@@ -23,7 +29,7 @@ async function loadMatchHistory(limit = 10, page = 1) {
   }
 }
 
-function displayMatchHistory(matches) {
+function displayMatchHistory(matches, pagination) {
   const matchesContent = document.querySelector(".matches-content");
 
   if (!matchesContent) {
@@ -42,7 +48,7 @@ function displayMatchHistory(matches) {
     return;
   }
 
-  matchesContent.innerHTML = matches
+  const matchesHtml = matches
     .map(
       (match) => `
     <div class="match-data">
@@ -83,6 +89,162 @@ function displayMatchHistory(matches) {
   `
     )
     .join("");
+  const paginationHTML = createPaginationHTML(pagination);
+  matchesContent.innerHTML = matchesHtml + paginationHTML;
+}
+
+function createPaginationHTML(pagination) {
+  if (pagination.totalPages <= 1) {
+    return "";
+  }
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalGames,
+    hasPrevPage,
+    hasNextPage,
+  } = pagination;
+
+  // Generate page numbers with ellipsis logic
+  const getPageElements = () => {
+    const elements = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      // Show all pages if total pages <= maxVisible
+      for (let i = 1; i <= totalPages; i++) {
+        elements.push({ type: "page", number: i });
+      }
+    } else {
+      // Always show first page
+      elements.push({ type: "page", number: 1 });
+
+      let start, end;
+
+      if (currentPage <= 3) {
+        // Near beginning: 1 2 3 4 ... last
+        start = 2;
+        end = 4;
+        if (end < totalPages - 1) {
+          elements.push(
+            ...Array.from({ length: end - start + 1 }, (_, i) => ({
+              type: "page",
+              number: start + i,
+            }))
+          );
+          elements.push({ type: "ellipsis", id: "end" });
+        } else {
+          elements.push(
+            ...Array.from({ length: totalPages - 1 }, (_, i) => ({
+              type: "page",
+              number: i + 2,
+            }))
+          );
+        }
+      } else if (currentPage >= totalPages - 2) {
+        // Near end: 1 ... last-3 last-2 last-1 last
+        if (totalPages > 4) {
+          elements.push({ type: "ellipsis", id: "start" });
+          start = totalPages - 3;
+          elements.push(
+            ...Array.from({ length: 3 }, (_, i) => ({
+              type: "page",
+              number: start + i,
+            }))
+          );
+        } else {
+          elements.push(
+            ...Array.from({ length: totalPages - 2 }, (_, i) => ({
+              type: "page",
+              number: i + 2,
+            }))
+          );
+        }
+      } else {
+        // In middle: 1 ... current-1 current current+1 ... last
+        elements.push({ type: "ellipsis", id: "start" });
+        elements.push({ type: "page", number: currentPage - 1 });
+        elements.push({ type: "page", number: currentPage });
+        elements.push({ type: "page", number: currentPage + 1 });
+        elements.push({ type: "ellipsis", id: "end" });
+      }
+
+      // Always show last page (if not already included)
+      const lastElem = elements[elements.length - 1];
+      if (
+        !(
+          lastElem &&
+          lastElem.type === "page" &&
+          lastElem.number === totalPages
+        )
+      ) {
+        elements.push({ type: "page", number: totalPages });
+      }
+    }
+
+    return elements;
+  };
+
+  const pageElements = getPageElements();
+
+  return `
+    <nav class="friend-pagination">
+      <div class="pagination-info">
+        <p>Showing ${startIndex} to ${endIndex} of ${totalGames} Matches</p>
+      </div>
+      <ul class="pagination">
+        <li class="page-item">
+          <button class="page-slide back ${!hasPrevPage ? "disable" : ""}" 
+                  data-page="${currentPage - 1}" 
+                  ${!hasPrevPage ? "disabled" : ""}>
+            <i class="fa-solid fa-chevron-left"></i>
+            Back
+          </button>
+        </li>
+        ${pageElements
+          .map((element) => {
+            if (element.type === "page") {
+              return `
+              <li class="page-item">
+                <button class="page-curr ${
+                  element.number === currentPage ? "active" : ""
+                }" 
+                        data-page="${element.number}">
+                  ${element.number}
+                </button>
+              </li>
+            `;
+            } else {
+              // Ellipsis button: compute target page to jump to
+              const targetPage =
+                element.id === "start"
+                  ? Math.max(2, currentPage - 2)
+                  : Math.min(totalPages - 1, currentPage + 2);
+
+              return `
+              <li class="page-item">
+                <button class="page-ellipsis" data-page="${targetPage}" title="Jump to page ${targetPage}">
+                  <i class="fa-solid fa-ellipsis"></i>
+                </button>
+              </li>
+            `;
+            }
+          })
+          .join("")}
+        <li class="page-item">
+          <button class="page-slide next ${!hasNextPage ? "disable" : ""}" 
+                  data-page="${currentPage + 1}" 
+                  ${!hasNextPage ? "disabled" : ""}>
+            Next
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  `;
 }
 
 function displayMatchHistoryError(message) {
@@ -134,7 +296,7 @@ function startMatchHistoryAutoRefresh(interval = 30000) {
   window.mainUtils.matchHistoryAutoRefreshInterval = setInterval(() => {
     if (!document.hidden) {
       console.log("Auto-refreshing match history...");
-      loadMatchHistory();
+      loadMatchHistory(currentMatchesPage);
     }
   }, interval);
 }
@@ -147,21 +309,69 @@ function stopMatchHistoryAutoRefresh() {
 }
 
 function setupMatchHistoryEventListeners() {
+  const matchesContent = document.querySelector(".matches-content");
+
+  if (!matchesContent) {
+    console.warn("Matches content container not found");
+    return;
+  }
+
+  matchesContent.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+
+    // Only handle pagination buttons
+    if (
+      btn.classList.contains("page-curr") ||
+      btn.classList.contains("page-slide") ||
+      btn.classList.contains("page-ellipsis")
+    ) {
+      e.preventDefault();
+
+      if (btn.disabled) return;
+
+      const page = parseInt(btn.dataset.page, 10);
+      if (page && page !== currentMatchesPage) {
+        currentMatchesPage = page;
+        loadMatchHistory(page);
+      }
+    }
+  });
+
+  document.getElementById("dropdownBtn").addEventListener("click", function () {
+    document.getElementById("dropdownMenu").classList.toggle("show");
+  });
+
+  const inputs = document.querySelectorAll("#dropdownMenu input");
+  inputs.forEach((ele) => {
+    ele.addEventListener("click", (e) => {
+      document.querySelectorAll(".dropdown-item").forEach((label) => {
+        label.classList.remove("selected");
+      });
+
+      e.target.parentElement.classList.add("selected");
+
+      const buttonText =
+        e.target.parentElement.querySelector("span").textContent;
+      document.querySelector("#dropdownBtn span").textContent = buttonText;
+    });
+  });
+
   // Update visibility change handler to include match history
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      loadMatchHistory();
+      loadMatchHistory(currentMatchesPage);
     }
   });
 
   // Update online status handler to refresh match history
   window.addEventListener("online", () => {
-    loadMatchHistory();
+    loadMatchHistory(currentMatchesPage);
   });
 }
 
 function initializeMatchHistory() {
-  loadMatchHistory();
+  loadMatchHistory(1);
   setupMatchHistoryEventListeners();
   startMatchHistoryAutoRefresh();
 }
@@ -176,4 +386,5 @@ window.matchHistoryUtils = {
   stopMatchHistoryAutoRefresh,
   setupMatchHistoryEventListeners,
   initializeMatchHistory,
+  getCurrentPage: () => currentMatchesPage,
 };
