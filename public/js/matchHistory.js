@@ -1,9 +1,27 @@
 let currentMatchesPage = 1;
+let currentFilters = {
+  search: '',
+  result: 'all'
+};
 
 async function loadMatchHistory(page = 1, limit = 10) {
   try {
+    // Build query parameters
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+
+    // Add filter parameters if they exist
+    if (currentFilters.search.trim()) {
+      params.append('search', currentFilters.search.trim());
+    }
+    if (currentFilters.result && currentFilters.result !== 'all') {
+      params.append('result', currentFilters.result);
+    }
+
     const response = await fetch(
-      `/api/matchHistory/history?page=${page}&limit=${limit}`,
+      `/api/matchHistory/history?${params.toString()}`,
       {
         method: "GET",
         credentials: "include",
@@ -15,18 +33,44 @@ async function loadMatchHistory(page = 1, limit = 10) {
       if (result.success) {
         displayMatchHistory(result.matchHistory, result.pagination);
         const header = document.querySelector(".matches-section h3");
-        if (header && result.count?.total) {
-          header.textContent = `Recent Matches (${result.count.total})`;
+        if (header && result.count?.total !== undefined) {
+          const filterText = getFilterDisplayText();
+          header.textContent = `${filterText} (${result.count.total})`;
         }
       } else {
         console.error("Failed to load match history:", result.message);
+        displayMatchHistoryError(result.message || "Failed to load match history");
       }
     } else {
       console.error("Failed to fetch match history");
+      displayMatchHistoryError("Failed to fetch match history");
     }
   } catch (error) {
     console.error("Error loading match history:", error);
+    displayMatchHistoryError("Error loading match history");
   }
+}
+
+function getFilterDisplayText() {
+  const hasSearch = currentFilters.search.trim().length > 0;
+  const hasResultFilter = currentFilters.result !== 'all';
+  
+  if (!hasSearch && !hasResultFilter) {
+    return "Recent Matches";
+  }
+  
+  let text = "Filtered Matches";
+  
+  if (hasResultFilter) {
+    const resultText = currentFilters.result.charAt(0).toUpperCase() + currentFilters.result.slice(1);
+    text = `${resultText} Only`;
+  }
+  
+  if (hasSearch) {
+    text += hasResultFilter ? ` - "${currentFilters.search}"` : ` - "${currentFilters.search}"`;
+  }
+  
+  return text;
 }
 
 function displayMatchHistory(matches, pagination) {
@@ -38,11 +82,25 @@ function displayMatchHistory(matches, pagination) {
   }
 
   if (matches.length === 0) {
+    const hasFilters = currentFilters.search.trim() || currentFilters.result !== 'all';
+    const emptyMessage = hasFilters 
+      ? `No matches found matching your filters.`
+      : `No matches played yet`;
+    const emptySubtext = hasFilters 
+      ? `Try adjusting your search or filter criteria.`
+      : `Start playing to see your match history!`;
+
     matchesContent.innerHTML = `
       <div style="text-align: center; padding: 30px; color: #999;">
-        <i class="fas fa-gamepad" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-        <p>No matches played yet</p>
-        <p style="font-size: 12px;">Start playing to see your match history!</p>
+        <i class="fas fa-${hasFilters ? 'filter' : 'gamepad'}" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+        <p>${emptyMessage}</p>
+        <p style="font-size: 12px;">${emptySubtext}</p>
+        ${hasFilters ? `
+          <button onclick="clearAllFilters()" style="margin-top: 15px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: inherit;">
+            <i class="fas fa-times" style="margin-right: 5px;"></i>
+            Clear Filters
+          </button>
+        ` : ''}
       </div>
     `;
     return;
@@ -201,7 +259,7 @@ function createPaginationHTML(pagination) {
                   data-page="${currentPage - 1}" 
                   ${!hasPrevPage ? "disabled" : ""}>
             <i class="fa-solid fa-chevron-left"></i>
-            Back
+            <span>Back</span>
           </button>
         </li>
         ${pageElements
@@ -238,7 +296,7 @@ function createPaginationHTML(pagination) {
           <button class="page-slide next ${!hasNextPage ? "disable" : ""}" 
                   data-page="${currentPage + 1}" 
                   ${!hasNextPage ? "disabled" : ""}>
-            Next
+            <span>Next</span>
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </li>
@@ -288,6 +346,65 @@ function getResultIcon(status) {
   }
 }
 
+// Filter functions
+function applyFilters() {
+  currentMatchesPage = 1; // Reset to first page when applying filters
+  displayMatchHistoryLoading();
+  loadMatchHistory(currentMatchesPage);
+}
+
+function clearAllFilters() {
+  // Clear search input
+  const searchInput = document.querySelector('.search-match');
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  
+  // Reset dropdown to "All Results"
+  const allResultsRadio = document.querySelector('input[value="all"]');
+  if (allResultsRadio) {
+    allResultsRadio.checked = true;
+    
+    // Update dropdown display
+    document.querySelectorAll(".dropdown-item").forEach((label) => {
+      label.classList.remove("selected");
+    });
+    allResultsRadio.parentElement.classList.add("selected");
+    
+    const dropdownBtn = document.querySelector("#dropdownBtn span");
+    if (dropdownBtn) {
+      dropdownBtn.textContent = "All Results";
+    }
+  }
+  
+  // Clear filters and reload
+  currentFilters = {
+    search: '',
+    result: 'all'
+  };
+  
+  applyFilters();
+}
+
+let searchTimeout;
+function handleSearchInput(value) {
+  // Clear previous timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  
+  // Debounce search input
+  searchTimeout = setTimeout(() => {
+    currentFilters.search = value;
+    applyFilters();
+  }, 500); // Wait 500ms after user stops typing
+}
+
+function handleResultFilter(value) {
+  currentFilters.result = value;
+  applyFilters();
+}
+
 function startMatchHistoryAutoRefresh(interval = 30000) {
   if (window.mainUtils.matchHistoryAutoRefreshInterval) {
     clearInterval(window.mainUtils.matchHistoryAutoRefreshInterval);
@@ -333,28 +450,57 @@ function setupMatchHistoryEventListeners() {
       const page = parseInt(btn.dataset.page, 10);
       if (page && page !== currentMatchesPage) {
         currentMatchesPage = page;
+        displayMatchHistoryLoading();
         loadMatchHistory(page);
       }
     }
   });
 
-  document.getElementById("dropdownBtn").addEventListener("click", function () {
-    document.getElementById("dropdownMenu").classList.toggle("show");
-  });
+  // Setup search input listener
+  const searchInput = document.querySelector('.search-match');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      handleSearchInput(e.target.value);
+    });
+  }
+
+  // Setup dropdown functionality
+  if (document.getElementById("dropdownBtn")) {
+    document
+      .getElementById("dropdownBtn")
+      .addEventListener("click", function () {
+        document.getElementById("dropdownMenu").classList.toggle("show");
+      });
+  }
 
   const inputs = document.querySelectorAll("#dropdownMenu input");
-  inputs.forEach((ele) => {
-    ele.addEventListener("click", (e) => {
-      document.querySelectorAll(".dropdown-item").forEach((label) => {
-        label.classList.remove("selected");
+  if (inputs) {
+    inputs.forEach((ele) => {
+      ele.addEventListener("click", (e) => {
+        document.querySelectorAll(".dropdown-item").forEach((label) => {
+          label.classList.remove("selected");
+        });
+
+        e.target.parentElement.classList.add("selected");
+
+        const buttonText =
+          e.target.parentElement.querySelector("span").textContent;
+        document.querySelector("#dropdownBtn span").textContent = buttonText;
+        
+        // Apply result filter
+        handleResultFilter(e.target.value);
       });
-
-      e.target.parentElement.classList.add("selected");
-
-      const buttonText =
-        e.target.parentElement.querySelector("span").textContent;
-      document.querySelector("#dropdownBtn span").textContent = buttonText;
     });
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('dropdownMenu');
+    const dropdownBtn = document.getElementById('dropdownBtn');
+    
+    if (dropdown && dropdownBtn && !dropdownBtn.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('show');
+    }
   });
 
   // Update visibility change handler to include match history
@@ -376,6 +522,9 @@ function initializeMatchHistory() {
   startMatchHistoryAutoRefresh();
 }
 
+// Make clearAllFilters globally available
+window.clearAllFilters = clearAllFilters;
+
 window.matchHistoryUtils = {
   loadMatchHistory,
   displayMatchHistory,
@@ -387,4 +536,9 @@ window.matchHistoryUtils = {
   setupMatchHistoryEventListeners,
   initializeMatchHistory,
   getCurrentPage: () => currentMatchesPage,
+  getCurrentFilters: () => currentFilters,
+  applyFilters,
+  clearAllFilters,
+  handleSearchInput,
+  handleResultFilter
 };
