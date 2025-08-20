@@ -9,12 +9,14 @@ class GameController {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
-      
-      // Get filter parameters
-      const search = req.query.search || '';
-      const resultFilter = req.query.result || 'all';
 
-      console.log(`Fetching match history for user: ${userId}, search: "${search}", result: "${resultFilter}"`);
+      // Get filter parameters
+      const search = req.query.search || "";
+      const resultFilter = req.query.result || "all";
+
+      console.log(
+        `Fetching match history for user: ${userId}, search: "${search}", result: "${resultFilter}"`
+      );
 
       // Build the base query
       let query = {
@@ -123,14 +125,16 @@ class GameController {
       if (search && search.trim()) {
         const searchLower = search.toLowerCase().trim();
         filteredMatches = filteredMatches.filter((match) => {
-          const opponentMatch = match.opponentUsername.toLowerCase().includes(searchLower);
+          const opponentMatch = match.opponentUsername
+            .toLowerCase()
+            .includes(searchLower);
           const wordMatch = match.word.toLowerCase().includes(searchLower);
           return opponentMatch || wordMatch;
         });
       }
 
       // Apply result filter
-      if (resultFilter && resultFilter !== 'all') {
+      if (resultFilter && resultFilter !== "all") {
         filteredMatches = filteredMatches.filter((match) => {
           return match.result.status === resultFilter;
         });
@@ -143,7 +147,7 @@ class GameController {
       const paginatedMatches = filteredMatches.slice(skip, skip + limit);
 
       const totalPages = Math.ceil(totalFilteredGames / limit);
-      
+
       res.json({
         success: true,
         matchHistory: paginatedMatches,
@@ -164,7 +168,7 @@ class GameController {
         filters: {
           search: search,
           result: resultFilter,
-        }
+        },
       });
     } catch (error) {
       console.error("Get match history error details:", error);
@@ -310,6 +314,186 @@ class GameController {
         message: "Failed to load performance overview",
       });
     }
+  }
+
+ async getUserStats(req, res) {
+    try {
+      const userId = req.user.userId;
+
+      console.log(`Calculating user stats for user: ${userId}`);
+
+      // Get all completed games for the user
+      const games = await Games.find({
+        "players.user": userId,
+        status: "completed",
+      })
+        .populate("players.user", "username")
+        .populate("winner", "username")
+        .sort({ completedAt: -1 });
+
+      console.log(`Found ${games.length} completed games for stats calculation`);
+
+      // Initialize stats
+      let totalGames = 0;
+      let wins = 0;
+      let losses = 0;
+      let draws = 0;
+      let totalGuesses = 0;
+      let totalGameDuration = 0;
+      let validDurationGames = 0;
+      let currentStreak = 0;
+      let bestStreak = 0;
+      let tempStreak = 0;
+      let isStreakActive = true;
+
+      // Process each game
+      games.forEach((game, index) => {
+        const currUser = game.players.find(
+          (player) => player.user._id.toString() === userId
+        );
+        const opponent = game.players.find(
+          (player) => player.user._id.toString() !== userId
+        );
+
+        // Skip if we can't find both players
+        if (!currUser || !opponent) {
+          console.warn(`Game ${game._id} missing player data in stats calculation`);
+          return;
+        }
+
+        totalGames++;
+
+        // Calculate result
+        let result = "draw";
+        const yourScore = currUser.score || 0;
+        const oppScore = opponent.score || 0;
+
+        if (game.winner) {
+          result = game.winner._id.toString() === userId ? "won" : "lost";
+        } else if (yourScore > oppScore) {
+          result = "won";
+        } else if (yourScore < oppScore) {
+          result = "lost";
+        }
+
+        // Update win/loss/draw counts
+        if (result === "won") {
+          wins++;
+          if (isStreakActive) {
+            tempStreak++;
+            if (index === 0) currentStreak = tempStreak; // Current streak is only for most recent games
+          } else {
+            tempStreak = 1;
+            isStreakActive = true;
+            if (index === 0) currentStreak = 1;
+          }
+        } else {
+          if (isStreakActive && index === 0) {
+            currentStreak = 0; // Current streak broken
+          }
+          isStreakActive = false;
+          bestStreak = Math.max(bestStreak, tempStreak);
+          tempStreak = 0;
+          
+          if (result === "lost") {
+            losses++;
+          } else {
+            draws++;
+          }
+        }
+
+        // Update best streak
+        bestStreak = Math.max(bestStreak, tempStreak);
+
+        // Calculate guesses (attempts)
+        const guesses = currUser.attempts || currUser.wordsGuessed || 0;
+        totalGuesses += guesses;
+
+        // Calculate game duration
+        if (game.completedAt && game.startedAt) {
+          const duration = new Date(game.completedAt) - new Date(game.startedAt);
+          if (duration > 0) {
+            totalGameDuration += duration;
+            validDurationGames++;
+          }
+        }
+      });
+
+      // Calculate derived stats
+      const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+      const averageGuesses = totalGames > 0 ? Math.round((totalGuesses / totalGames) * 10) / 10 : 0;
+      const averageGameDuration = validDurationGames > 0 
+        ? Math.round((totalGameDuration / validDurationGames) / 1000) // Convert to seconds
+        : 0;
+
+      // Format average game duration
+      const formatAverageDuration = (seconds) => {
+        if (seconds < 60) return `${seconds}s`;
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+      };
+
+      const stats = {
+        totalGames,
+        wins,
+        losses,
+        draws,
+        winRate,
+        currentStreak,
+        bestStreak,
+        averageGuesses,
+        averageGameDuration: formatAverageDuration(averageGameDuration),
+        averageGameDurationSeconds: averageGameDuration,
+        winLossRecord: `${wins}W - ${losses}L - ${draws}D`,
+      };
+
+      console.log(`Calculated stats:`, stats);
+
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error) {
+      console.error("Get user stats error:", error);
+      logger.error("Get user stats error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to load user stats",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  calculateStreaks(gameResults) {
+    if (gameResults.length === 0) {
+      return { currentStreak: 0, bestStreak: 0 };
+    }
+
+    let currentStreak = 0;
+    let bestStreak = 0;
+    let tempStreak = 0;
+
+    // Calculate current streak (from most recent games)
+    for (let i = 0; i < gameResults.length; i++) {
+      if (gameResults[i].result === "won") {
+        currentStreak++;
+      } else {
+        break; // Current streak broken
+      }
+    }
+
+    // Calculate best streak (scan all games)
+    gameResults.forEach((game) => {
+      if (game.result === "won") {
+        tempStreak++;
+        bestStreak = Math.max(bestStreak, tempStreak);
+      } else {
+        tempStreak = 0;
+      }
+    });
+
+    return { currentStreak, bestStreak };
   }
 
   formatDate(date) {
