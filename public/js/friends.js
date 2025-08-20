@@ -1,8 +1,9 @@
 let currentFriendsPage = 1;
 
 async function addNewFriend() {
-  const username = prompt("Enter username to add as friend:");
-  if (!username || username.trim() === "") return;
+  const username = document.querySelector(".search-username").value;
+  // const username = prompt("Enter username to add as friend:");
+  // if (!username || username.trim() === "") return;
 
   try {
     const response = await fetch("/api/friends/request", {
@@ -148,7 +149,7 @@ function displayPendingRequests(receivedRequests, sentRequests) {
     requestsContainer = document.createElement("div");
     requestsContainer.className = "requests-container";
 
-    const friendsSection = document.querySelector(".friends-section");
+    const friendsSection = document.querySelector(".send-request");
     friendsSection.parentNode.insertBefore(requestsContainer, friendsSection);
   }
 
@@ -346,7 +347,7 @@ async function loadFriendsData(page = 1, limit = 8, isDashboard = false) {
               )
               .join("");
             // Create pagination HTML
-            if(!isDashboard) {
+            if (!isDashboard) {
               const paginationHTML = createPaginationHTML(pagination);
               friendsContainer.innerHTML = friendsHTML + paginationHTML;
             } else {
@@ -466,7 +467,7 @@ function startFriendsAutoRefresh() {
 }
 
 function setupFriendsEventListeners() {
-  const addFriendBtn = document.querySelector(".add-friend-btn");
+  const addFriendBtn = document.querySelector(".search-container .sent");
   addFriendBtn.addEventListener("click", addNewFriend);
   const friendsContainer = document.querySelector(".friend-content");
   friendsContainer.addEventListener("click", (e) => {
@@ -653,7 +654,7 @@ function createPaginationHTML(pagination) {
                   data-page="${currentPage - 1}" 
                   ${!hasPrevPage ? "disabled" : ""}>
             <i class="fa-solid fa-chevron-left"></i>
-            Back
+            <span>Back</span>
           </button>
         </li>
         ${pageElements
@@ -690,7 +691,7 @@ function createPaginationHTML(pagination) {
           <button class="page-slide next ${!hasNextPage ? "disable" : ""}" 
                   data-page="${currentPage + 1}" 
                   ${!hasNextPage ? "disabled" : ""}>
-            Next
+            <span>Next</span>
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </li>
