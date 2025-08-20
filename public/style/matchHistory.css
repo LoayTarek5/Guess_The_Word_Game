@@ -53,7 +53,6 @@
   position: relative;
   flex: 0.2;
 }
-
 .filter-matches .dropdown-content button.dropdown {
   outline: none;
   border: none;
@@ -63,7 +62,6 @@
   width: 100%;
   justify-content: space-between;
 }
-
 .filter-matches .dropdown-menu {
   display: none;
   position: absolute;
@@ -81,38 +79,35 @@
 .filter-matches .dropdown-menu.show {
   display: flex;
 }
-
 .dropdown-item input[type="radio"] {
   display: none;
 }
 .dropdown-item {
-  padding: 10px 20px;
+  padding: 10px 15px;
   border-bottom: 1px solid gainsboro;
   position: relative;
 }
-
 .dropdown-item::before {
   content: "";
   display: none;
   width: 1em;
   height: 1em;
-  margin-right: 0.5em;
   vertical-align: middle;
   background-image: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'>\
+<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='green' stroke-width='2'>\
 <polyline points='20 6 9 17 4 12'/>\
 </svg>");
   background-size: contain;
   background-repeat: no-repeat;
+  font-size: 17px;
 }
 .dropdown-item:hover::before {
   display: inline-block;
-
 }
 .dropdown-item.selected::before {
+  display: inline-block;
   color: #4caf50;
 }
-
 @media (max-width: 768px) {
   .filter-matches .search-container {
     flex-direction: column;
