@@ -537,9 +537,69 @@ function setupMatchHistoryEventListeners() {
 }
 
 function initializeMatchHistory() {
+  loadUserStats();
   loadMatchHistory(1);
   setupMatchHistoryEventListeners();
   startMatchHistoryAutoRefresh();
+}
+
+async function loadUserStats() {
+  try {
+    const response = await fetch("/api/matchHistory/stats", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        displayUserStats(result.stats);
+      } else {
+        console.error("Failed to load user stats:", result.message);
+        displayStatsError();
+      }
+    } else {
+      console.error("Failed to fetch user stats");
+      displayStatsError();
+    }
+  } catch (error) {
+    console.error("Error loading user stats:", error);
+    displayStatsError();
+  }
+}
+
+function displayUserStats(stats) {
+  // Update Total Games
+  const totalGamesElement = document.getElementById("total-games");
+  if (totalGamesElement) {
+    totalGamesElement.textContent = stats.totalGames.toLocaleString();
+  }
+
+  // Update Win Rate
+  const winRateElement = document.getElementById('win-rate');
+  const winLoseElement = document.getElementById('win-lose');
+  
+  if (winRateElement) {
+    winRateElement.textContent = `${stats.winRate}%`;
+  }
+  
+  if (winLoseElement) {
+    winLoseElement.textContent = stats.winLossRecord;
+  }
+
+  // Update Best Streak
+  const streakElement = document.getElementById('streak');
+  if (streakElement) {
+    streakElement.textContent = stats.bestStreak;
+  }
+
+  // Update Average Guesses
+  const avgGuessesElement = document.getElementById('average-guesses');
+  if (avgGuessesElement) {
+    avgGuessesElement.textContent = stats.averageGuesses > 0 
+      ? stats.averageGuesses
+      : '0';
+  }
 }
 
 // Make clearAllFilters globally available
