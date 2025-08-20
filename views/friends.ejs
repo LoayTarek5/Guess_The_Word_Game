@@ -1,4 +1,38 @@
 <div class="main-section">
+  <section class="send-request">
+    <header class="header-filter">
+      <svg
+        class="filter-icon"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="8.5" cy="7" r="4"></circle>
+        <line x1="20" y1="8" x2="20" y2="14"></line>
+        <line x1="23" y1="11" x2="17" y2="11"></line>
+      </svg>
+      <!-- <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon> -->
+      <h3>Add Friend</h3>
+    </header>
+    <div class="search-container">
+      <div class="search-content">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input
+          type="text"
+          class="search-username"
+          placeholder="Enter Username"
+        />
+      </div>
+      <div class="sent">
+        <button>Send Request</button>
+      </div>
+    </div>
+  </section>
+
   <section class="friends-section">
     <div class="header-friend">
       <h3>Friends</h3>
@@ -7,8 +41,7 @@
         Add Friend
       </button>
     </div>
-    <div class="friend-content">
-    </div>
+    <div class="friend-content"></div>
   </section>
 </div>
 <script src="js/main.js"></script>
