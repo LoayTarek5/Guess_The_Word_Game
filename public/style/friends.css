@@ -111,6 +111,41 @@
 .friends-section .friend-icons i:hover {
   color: #495057;
 }
+.friends-section .friend-icons .icon {
+  padding: 8px 10px;
+  border-radius: 7px;
+  flex: 1;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #dee3ed;
+  cursor: pointer;
+}
+.friends-section .friend-icons .icon.invite {
+  background-color: var(--btn-color);
+  color: white;
+  font-size: 12px;
+}
+.friends-section .friend-icons .icon i {
+  font-size: 15px;
+}
+.friends-section .friend-icons .icon.invite i {
+  color: white;
+}
+.friends-section .friend-icons .icon.message-friend {
+  color: var(--main-txt-color);
+}
+.friends-section .friend-icons .icon.remove-friend {
+  flex: 0;
+  border: 0;
+}
+.friends-section .friend-icons .icon.remove-friend span {
+  display: none;
+}
 .friend-pagination {
   display: flex;
   align-items: center;
@@ -288,8 +323,6 @@
 .request-badge {
   animation: pulse 2s infinite;
 }
-
-/* ///////////////////////////////////////// */
 .send-request {
   background: white;
   border-radius: 12px;
@@ -354,5 +387,48 @@
   }
   .send-request .sent button {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .friends-section .friend-group {
+    flex-direction: column;
+    align-items: normal;
+    gap: 30px;
+  }
+  .friends-section .friend-icons {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .friends-section .friend-icons .icon.invite {
+    flex: 1;
+  }
+  .friends-section .friend-icons .icon.message-friend {
+    flex: 1;
+  }
+  .friends-section .friend-icons .icon.remove-friend {
+    min-width: 100%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #dee3ed;
+  }
+  .friends-section .friend-icons .icon.remove-friend span {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 568px) {
+  .request-item {
+    flex-direction: column;
+    align-items: normal;
+    gap: 30px;
+  }
+  .request-actions {
+    width: 100%;
+  }
+  .accept-btn,
+  .decline-btn,
+  .cancel-btn {
+    flex: 1;
+    justify-content: center;
   }
 }
