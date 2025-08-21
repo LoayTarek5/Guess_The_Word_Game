@@ -330,17 +330,23 @@ async function loadFriendsData(page = 1, limit = 8, isDashboard = false) {
                   </div>
                 </div>
                 <div class="friend-icons">
-                  ${
-                    friend.isOnline
-                      ? '<i class="fa-solid fa-gamepad" title="Invite to game"></i>'
-                      : ""
-                  }
-                  <i class="fa-regular fa-message" title="Send message"></i>
-                  <i class="fa-solid fa-user-minus remove-friend-btn" title="Remove friend" data-user-id="${
-                    friend.id
-                  }" data-username="${
-                  friend.username
-                }" style="cursor: pointer; color: #dc3545;"></i>
+                    ${
+                      friend.isOnline
+                        ? '<div class="icon invite"><i class="fa-solid fa-gamepad" title="Invite to game"></i> <span>Challenge</span></div>'
+                        : ""
+                    }
+                  <div class="icon message-friend">
+                    <i class="fa-regular fa-message" title="Send message"></i>
+                    <span>Message</span>
+                  </div>
+                  <div class="icon remove-friend">
+                    <i class="fa-solid fa-user-minus remove-friend-btn" title="Remove friend" data-user-id="${
+                      friend.id
+                    }" data-username="${
+                    friend.username
+                    }" style="cursor: pointer; color: #dc3545;"></i>
+                    <span>Remove Friend</span>
+                  </div>
                 </div>
               </div>
             `
