@@ -12,6 +12,7 @@ import friendPageRouter from "./routes/friendsPage.js";
 import friendApiRouter from "./routes/friendsApi.js";
 import matchHistoryPageRouter from "./routes/matchHistoryPage.js";
 import matchHistoryApiRouter from "./routes/matchHistoryApi.js";
+import gameLobbyPage from "./routes/gameLobbyPage.js";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
@@ -111,6 +112,8 @@ app.use("/api/friends", friendApiRouter);     // JSON API: /api/friends
 
 app.use("/matchHistory", matchHistoryPageRouter);
 app.use("/api/matchHistory", matchHistoryApiRouter);
+
+app.use("/lobby", gameLobbyPage);
 // 404 handler
 app.use(notFound);
 
