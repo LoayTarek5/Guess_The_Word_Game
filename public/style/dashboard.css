@@ -537,7 +537,9 @@ aside#sidebar.active ~ .main-content {
 .dash-friends-section .friend-icons i:hover {
   color: #495057;
 }
-
+.dash-friends-section .friend-icons span {
+  display: none;
+}
 @media (max-width: 768px) {
   .content-grid {
     grid-template-columns: 1fr;
