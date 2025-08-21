@@ -7,7 +7,7 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/guess_
 
 /* CONFIG */
 const BASE_USERNAME = "Bob";
-const TARGET_ACCEPTED = 12;
+const TARGET_ACCEPTED = 80;
 const TARGET_PENDING_RECEIVED = 5;
 const TARGET_PENDING_SENT = 4;
 const CLEAN_FRIENDSHIPS = true; // if true, delete existing friendships involving Bob first
