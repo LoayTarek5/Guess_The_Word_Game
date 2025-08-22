@@ -1,0 +1,337 @@
+<head>
+  <link rel="stylesheet" href="/style/gameLobby.css" />
+</head>
+<div class="main-section">
+  <div id="gameSettingsModal" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-cog"></i>
+          <div>
+            <h2>Game Settings</h2>
+            <p class="modal-subtitle">
+              Customize your word guessing game experience
+            </p>
+          </div>
+        </div>
+        <button class="modal-close" id="closeModal">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Difficulty Preview -->
+        <div class="difficulty-preview">
+          <div class="difficulty-badge-top" id="difficultyBadge">Normal</div>
+          <p style="margin: 0 0 16px 0; font-weight: 600; color: #111827">
+            Difficulty Preview
+          </p>
+          <div class="difficulty-stats">
+            <div class="stat-item">
+              <div class="stat-number" id="previewLetters">5</div>
+              <div class="stat-label">Letters</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" id="previewTries">6</div>
+              <div class="stat-label">Tries</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" id="previewPlayers">2</div>
+              <div class="stat-label">Players</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Word Length Setting -->
+        <div class="settings-section">
+          <div class="settings-grid">
+            <div class="setting-group">
+              <div class="section-header">
+                <i class="fa-solid fa-font"></i>
+                <h3 class="section-title">Word Length</h3>
+              </div>
+              <p class="setting-description">
+                Choose the number of letters in each word
+              </p>
+              <select class="dropdown-select" id="wordLengthSelect">
+                <option value="4">4 Letters (Easy)</option>
+                <option value="5" selected>5 Letters (Normal)</option>
+                <option value="6">6 Letters (Hard)</option>
+                <option value="7">7 Letters (Expert)</option>
+              </select>
+            </div>
+
+            <div class="setting-group">
+              <div class="section-header">
+                <i class="fa-solid fa-target"></i>
+                <h3 class="section-title">Maximum Tries</h3>
+              </div>
+              <p class="setting-description">
+                Number of guesses allowed per player
+              </p>
+              <div class="tries-counter">
+                <button class="counter-btn" id="decreaseTries">−</button>
+                <div class="tries-display">
+                  <div class="tries-number" id="triesCount">6</div>
+                  <div class="tries-label">tries</div>
+                </div>
+                <button class="counter-btn" id="increaseTries">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Players Setting -->
+        <div class="settings-section">
+          <div class="section-header">
+            <i class="fa-solid fa-users"></i>
+            <h3 class="section-title">Players (2/2)</h3>
+          </div>
+          <p class="section-description">Set up players for your game</p>
+
+          <div class="group-size-tabs">
+            <button class="size-tab active" data-size="2">2 Players</button>
+            <button class="size-tab" data-size="3">3 Players</button>
+            <button class="size-tab" data-size="4">4 Players</button>
+          </div>
+
+          <div class="player-inputs" id="playerInputs">
+            <input type="text" class="player-input" value="You" disabled />
+            <input type="text" class="player-input" placeholder="Player 2" />
+            <input
+              type="text"
+              class="player-input"
+              placeholder="Player 3"
+              style="display: none"
+            />
+            <input
+              type="text"
+              class="player-input"
+              placeholder="Player 4"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="settings-section">
+          <div class="section-header">
+            <i class="fa-solid fa-magic-wand-sparkles"></i>
+            <h3 class="section-title">Quick Presets</h3>
+          </div>
+          <p class="section-description">
+            Choose from popular game configurations
+          </p>
+
+          <div class="preset-options">
+            <button class="preset-btn" data-preset="easy">
+              <div class="preset-title">Easy Mode</div>
+              <div class="preset-details">4 letters, 8 tries</div>
+            </button>
+            <button class="preset-btn active" data-preset="classic">
+              <div class="preset-title">Classic</div>
+              <div class="preset-details">5 letters, 6 tries</div>
+            </button>
+            <button class="preset-btn" data-preset="challenge">
+              <div class="preset-title">Challenge</div>
+              <div class="preset-details">6 letters, 5 tries</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="modal-actions">
+          <button class="btn-cancel" id="cancelBtn">Cancel</button>
+          <button class="btn-create" id="createGameBtn">
+            <i class="fa-solid fa-users"></i>
+            Create Game
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-options">
+    <div class="game-option-card quick-play">
+      <div class="game-option-header">
+        <i class="fa-solid fa-bolt"></i>
+        <h3 class="game-option-title">Quick Play</h3>
+      </div>
+      <p class="game-option-description">
+        Jump into a classic 5-letter word game instantly
+      </p>
+      <button class="game-option-btn btn-primary">
+        <i class="fa-solid fa-users"></i>
+        Find Match
+      </button>
+    </div>
+
+    <div class="game-option-card custom-game">
+      <div class="game-option-header">
+        <i class="fa-solid fa-cog"></i>
+        <h3 class="game-option-title">Custom Game</h3>
+      </div>
+      <p class="game-option-description">
+        Create a game with your preferred settings
+      </p>
+      <button class="game-option-btn btn-outline">
+        <i class="fa-solid fa-plus"></i>
+        Create Room
+      </button>
+    </div>
+
+    <div class="game-option-card join-game">
+      <div class="game-option-header">
+        <i class="fa-solid fa-sign-in-alt"></i>
+        <h3 class="game-option-title">Join Game</h3>
+      </div>
+      <input
+        type="text"
+        class="join-game-input"
+        placeholder="Enter room code"
+      />
+      <button class="game-option-btn btn-outline">Join Room</button>
+    </div>
+  </div>
+
+  <div class="active-games-list">
+    <div class="section-title">
+      <i class="fa-solid fa-users"></i>
+      Active Games
+    </div>
+    <div class="game-item">
+      <div class="game-info">
+        <div class="game-avatar">A</div>
+        <div class="game-details">
+          <div class="game-title-row">
+            <span class="game-name">Quick Match</span>
+            <span class="difficulty-badge badge-normal">Normal</span>
+            <div class="game-stats">
+              <span>5L</span>
+              <span>6T</span>
+            </div>
+          </div>
+          <div class="game-meta">Hosted by Alex • 2 min ago</div>
+        </div>
+      </div>
+      <div class="game-actions">
+        <div class="player-count">
+          <i class="fa-solid fa-users"></i>
+          1/2
+        </div>
+        <div class="status-indicator status-waiting">Waiting</div>
+        <button class="join-btn">Join Game</button>
+      </div>
+    </div>
+
+    <div class="game-item">
+      <div class="game-info">
+        <div class="game-avatar">S</div>
+        <div class="game-details">
+          <div class="game-title-row">
+            <span class="game-name">Word Masters Challenge</span>
+            <span class="difficulty-badge badge-hard">Hard</span>
+            <div class="game-stats">
+              <span>6L</span>
+              <span>5T</span>
+            </div>
+          </div>
+          <div class="game-meta">Hosted by Sarah • 5 min ago</div>
+        </div>
+      </div>
+      <div class="game-actions">
+        <div class="player-count">
+          <i class="fa-solid fa-users"></i>
+          3/4
+        </div>
+        <div class="status-indicator status-waiting">Waiting</div>
+        <button class="join-btn">Join Game</button>
+      </div>
+    </div>
+
+    <div class="game-item">
+      <div class="game-info">
+        <div class="game-avatar">M</div>
+        <div class="game-details">
+          <div class="game-title-row">
+            <span class="game-name">Easy Mode Fun</span>
+            <span class="difficulty-badge badge-easy">Easy</span>
+            <div class="game-stats">
+              <span>4L</span>
+              <span>8T</span>
+            </div>
+          </div>
+          <div class="game-meta">Hosted by Mike • 1 min ago</div>
+        </div>
+      </div>
+      <div class="game-actions">
+        <div class="player-count">
+          <i class="fa-solid fa-users"></i>
+          2/3
+        </div>
+        <div class="status-indicator status-progress">In Progress</div>
+        <button class="join-btn" disabled>In Progress</button>
+      </div>
+    </div>
+
+    <div class="game-item">
+      <div class="game-info">
+        <div class="game-avatar">E</div>
+        <div class="game-details">
+          <div class="game-title-row">
+            <span class="game-name">Expert Level</span>
+            <span class="difficulty-badge badge-hard">Hard</span>
+            <div class="game-stats">
+              <span>7L</span>
+              <span>4T</span>
+            </div>
+          </div>
+          <div class="game-meta">Hosted by Emma • 3 min ago</div>
+        </div>
+      </div>
+      <div class="game-actions">
+        <div class="player-count">
+          <i class="fa-solid fa-users"></i>
+          1/2
+        </div>
+        <div class="status-indicator status-waiting">Waiting</div>
+        <button class="join-btn">Join Game</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-modes">
+    <div class="mode-card">
+      <div class="mode-badge badge-easy">Easy</div>
+      <div class="mode-title">4 letters • 8+ tries</div>
+      <div class="mode-description">Perfect for beginners</div>
+    </div>
+
+    <div class="mode-card">
+      <div class="mode-badge badge-normal">Normal</div>
+      <div class="mode-title">5 letters • 6 tries</div>
+      <div class="mode-description">Classic word game</div>
+    </div>
+
+    <div class="mode-card">
+      <div class="mode-badge badge-hard">Hard</div>
+      <div class="mode-title">6+ letters • 5- tries</div>
+      <div class="mode-description">For experienced players</div>
+    </div>
+
+    <div class="mode-card">
+      <div class="mode-badge" style="background-color: #f3e8ff; color: #7c3aed">
+        Custom
+      </div>
+      <div class="mode-title">Your rules</div>
+      <div class="mode-description">Unlimited possibilities</div>
+    </div>
+  </div>
+</div>
+<script src="js/main.js"></script>
+<script src="js/gameLobby.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    window.mainUtils.initializeCommon();
+  });
+</script>
