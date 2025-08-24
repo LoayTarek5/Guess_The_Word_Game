@@ -13,6 +13,7 @@ import friendApiRouter from "./routes/friendsApi.js";
 import matchHistoryPageRouter from "./routes/matchHistoryPage.js";
 import matchHistoryApiRouter from "./routes/matchHistoryApi.js";
 import gameLobbyPage from "./routes/gameLobbyPage.js";
+import notificationsPage from "./routes/notificationsPage.js";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
@@ -107,13 +108,15 @@ app.use("/auth", authRoutes);
 
 app.use("/dashboard", dashboardRoutes);
 
-app.use("/friends", friendPageRouter);        // HTML pages: /friends
-app.use("/api/friends", friendApiRouter);     // JSON API: /api/friends
+app.use("/friends", friendPageRouter);
+app.use("/api/friends", friendApiRouter);
 
 app.use("/matchHistory", matchHistoryPageRouter);
 app.use("/api/matchHistory", matchHistoryApiRouter);
 
 app.use("/lobby", gameLobbyPage);
+
+app.use("/notifications", notificationsPage);
 // 404 handler
 app.use(notFound);
 
