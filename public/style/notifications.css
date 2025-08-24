@@ -1,0 +1,292 @@
+.state-cards {
+  margin: 25px 0;
+}
+.state-cards .unread {
+  color: #ef4444;
+  font-size: 12px;
+}
+
+.notifications-controls {
+  margin-bottom: 25px;
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #dee3ed;
+}
+.notifications-controls .header-filter {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--main-txt-color);
+  margin-bottom: 25px;
+}
+.notifications-controls .header-filter h3 {
+  margin: 0;
+  color: var(--main-txt-color);
+  font-weight: 600;
+}
+.notifications-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.search-box {
+  flex: 1;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 40px 10px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-box input:focus {
+  border-color: #3b82f6;
+}
+
+.search-box .search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.filter-dropdown,
+.sort-dropdown {
+  position: relative;
+}
+
+.dropdown-btn {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 35px 10px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 120px;
+  text-align: left;
+  position: relative;
+}
+
+.dropdown-btn::after {
+  content: "\f078";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  display: none;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdown-menu.show {
+  display: block;
+}
+
+.dropdown-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-item.selected {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.mark-all-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.mark-all-btn:hover {
+  background: #2563eb;
+}
+.notifications-section {
+  margin-top: 20px;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #dee3ed;
+}
+@media (max-width: 768px) {
+  .notifications-content {
+    flex-direction: column;
+    align-items: normal;
+  }
+  .dropdown-item {
+    padding: 20px;
+  }
+}
+
+.notifications-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 20px;
+}
+
+.notifications-list {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.notification-item {
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #dee3ed;
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  position: relative;
+  margin-bottom: 15px;
+  min-height: 160px;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item.unread {
+  background: #fafbfc;
+  border-left: 3px solid #3b82f6;
+}
+
+.notification-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-avatar.friend-request {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.notification-avatar.game-invite {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.notification-avatar.achievement {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.notification-avatar.message {
+  background: #f3e8ff;
+  color: #a855f7;
+}
+
+.notification-avatar.system {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.notification-type {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.notification-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+}
+
+.notification-text {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.notification-time {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+}
+
+.action-btn.accept {
+  background: #1f2937;
+  color: white;
+}
+
+.action-btn.decline {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.action-btn.join-game {
+  background: #1f2937;
+  color: white;
+}
+
+.action-btn:hover {
+  opacity: 0.9;
+}
