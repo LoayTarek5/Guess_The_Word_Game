@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Friendship from "../models/Friendship.js";
+import Notification from "../models/Notification.js";
 import logger from "../utils/logger.js";
 
 class FriendController {
@@ -16,7 +17,7 @@ class FriendController {
           message: "Username is required",
         });
       }
-
+      
       const recipient = await User.findOne({ username });
       if (!recipient) {
         return res.status(404).json({
@@ -38,6 +39,7 @@ class FriendController {
           { requester: recipient._id, recipient: userId },
         ],
       });
+      
       if (existingFriendship) {
         let message = "";
         switch (existingFriendship.status) {
@@ -70,6 +72,15 @@ class FriendController {
       });
 
       await friendship.save();
+
+      await Notification.create({
+        recipient: recipient._id,
+        sender: userId,
+        type: "friend_request",
+        title: "New Friend Request",
+        message: `${req.user.username} wants to be your friend`,
+        data: { friendRequestId: friendship._id },
+      });
 
       logger.info(
         `Friend request sent from ${req.user.username} to ${username}`
@@ -152,6 +163,15 @@ class FriendController {
       friendship.status = "accepted";
       await friendship.save();
 
+      await Notification.create({
+        recipient: friendship.requester,
+        sender: userId,
+        type: "friend_accepted",
+        title: "Friend Request Accepted",
+        message: `${req.user.username} accepted your friend request`,
+        data: { friendRequestId: friendship._id },
+      });
+
       logger.info(
         `Friend request accepted: ${friendship.requester.username} -> ${req.user.username}`
       );
@@ -194,9 +214,6 @@ class FriendController {
         );
       }
 
-      logger.info(
-        `Friend request declined: ${friendship.requester.username} -> ${req.user.username}`
-      );
       await Friendship.deleteOne({ _id: friendship._id });
 
       res.json({
