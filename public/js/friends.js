@@ -1,9 +1,9 @@
 let currentFriendsPage = 1;
 
 async function addNewFriend() {
-  const username = document.querySelector(".search-username").value;
+  const username = document.querySelector(".search-username").value.trim();
   // const username = prompt("Enter username to add as friend:");
-  // if (!username || username.trim() === "") return;
+  if (!username || username.trim() === "") return;
 
   try {
     const response = await fetch("/api/friends/request", {
