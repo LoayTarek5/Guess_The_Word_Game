@@ -37,6 +37,27 @@ userSchema.pre("save", async function (next) {
   return next();
 });
 
+userSchema.pre('deleteMany', async function(next) {
+  try {
+    const users = await this.model.find(this.getQuery());
+    const userIds = users.map(user => user._id);
+    
+    if (userIds.length > 0) {
+      const Friendship = mongoose.model('Friendship');
+      await Friendship.deleteMany({
+        $or: [
+          { requester: { $in: userIds } },
+          { recipient: { $in: userIds } }
+        ]
+      });
+      console.log(`Cleaned up friendships for ${userIds.length} deleted users`);
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Pre-remove middleware to cleanup friendships
 userSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
   try {
