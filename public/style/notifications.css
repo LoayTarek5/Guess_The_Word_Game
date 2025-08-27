@@ -207,7 +207,7 @@
   gap: 15px;
   position: relative;
   margin-bottom: 15px;
-  min-height: 160px;
+  /* min-height: 160px; */
 }
 
 .notification-item:last-child {
@@ -261,11 +261,31 @@
 
 .notification-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 8px;
   margin-bottom: 5px;
 }
-
+.notification-info,
+.notification-icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.notification-header i {
+  cursor: pointer;
+  border-radius: 50%;
+  height: 30px;
+  width: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  transition: 0.3s;
+}
+.notification-header i:hover {
+  background-color: #8080804a;
+}
 .notification-type {
   font-weight: 600;
   font-size: 14px;
