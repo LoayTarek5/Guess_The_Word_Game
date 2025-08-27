@@ -316,7 +316,7 @@ class GameController {
     }
   }
 
- async getUserStats(req, res) {
+  async getUserStats(req, res) {
     try {
       const userId = req.user.userId;
 
@@ -331,7 +331,9 @@ class GameController {
         .populate("winner", "username")
         .sort({ completedAt: -1 });
 
-      console.log(`Found ${games.length} completed games for stats calculation`);
+      console.log(
+        `Found ${games.length} completed games for stats calculation`
+      );
 
       // Initialize stats
       let totalGames = 0;
@@ -357,7 +359,9 @@ class GameController {
 
         // Skip if we can't find both players
         if (!currUser || !opponent) {
-          console.warn(`Game ${game._id} missing player data in stats calculation`);
+          console.warn(
+            `Game ${game._id} missing player data in stats calculation`
+          );
           return;
         }
 
@@ -394,7 +398,7 @@ class GameController {
           isStreakActive = false;
           bestStreak = Math.max(bestStreak, tempStreak);
           tempStreak = 0;
-          
+
           if (result === "lost") {
             losses++;
           } else {
@@ -411,7 +415,8 @@ class GameController {
 
         // Calculate game duration
         if (game.completedAt && game.startedAt) {
-          const duration = new Date(game.completedAt) - new Date(game.startedAt);
+          const duration =
+            new Date(game.completedAt) - new Date(game.startedAt);
           if (duration > 0) {
             totalGameDuration += duration;
             validDurationGames++;
@@ -420,18 +425,23 @@ class GameController {
       });
 
       // Calculate derived stats
-      const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-      const averageGuesses = totalGames > 0 ? Math.round((totalGuesses / totalGames) * 10) / 10 : 0;
-      const averageGameDuration = validDurationGames > 0 
-        ? Math.round((totalGameDuration / validDurationGames) / 1000) // Convert to seconds
-        : 0;
+      const winRate =
+        totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+      const averageGuesses =
+        totalGames > 0 ? Math.round((totalGuesses / totalGames) * 10) / 10 : 0;
+      const averageGameDuration =
+        validDurationGames > 0
+          ? Math.round(totalGameDuration / validDurationGames / 1000) // Convert to seconds
+          : 0;
 
       // Format average game duration
       const formatAverageDuration = (seconds) => {
         if (seconds < 60) return `${seconds}s`;
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+        return remainingSeconds > 0
+          ? `${minutes}m ${remainingSeconds}s`
+          : `${minutes}m`;
       };
 
       const stats = {
@@ -460,7 +470,8 @@ class GameController {
       res.status(500).json({
         success: false,
         message: "Failed to load user stats",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
