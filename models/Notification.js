@@ -99,6 +99,7 @@ const notificationSchema = new mongoose.Schema({
 // Compound indexes for common queries
 notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, type: 1, createdAt: -1 });
+notificationSchema.index({ recipient: 1, isRead: 1, type: 1, createdAt: -1 });
 
 // Update the updatedAt field before saving
 notificationSchema.pre("save", function (next) {
@@ -119,7 +120,7 @@ notificationSchema.virtual("age").get(function () {
 
 // Method to mark as read
 notificationSchema.methods.markAsRead = function () {
-  this.status = "read";
+  this.isRead = true;
   this.readAt = new Date();
   return this.save();
 };
@@ -134,7 +135,7 @@ notificationSchema.statics.getGameNotifications = function(userId, gameIdString)
 notificationSchema.statics.getUnreadCount = function (userId) {
   return this.countDocuments({
     recipient: userId,
-    status: { $in: ["pending", "acted_upon"] },
+    isRead: false,
   });
 };
 
