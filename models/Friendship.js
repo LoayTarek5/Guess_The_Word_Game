@@ -22,6 +22,8 @@ const friendshipSchema = new mongoose.Schema({
 
 // Compound index to prevent duplicate friendships
 friendshipSchema.index({ requester: 1, recipient: 1 }, { unique: true });
+friendshipSchema.index({ requester: 1, status: 1 });
+friendshipSchema.index({ recipient: 1, status: 1 });
 
 // Pre-save middleware
 friendshipSchema.pre("save", async function (next) {
