@@ -8,7 +8,8 @@
     "start": "node server",
     "dev": "node --watch --env-file=.env server",
     "seedGames": "node scripts/createTestGames.js",
-    "seedFriends": "node scripts/createTestFriends.js"
+    "seedFriends": "node scripts/createTestFriends.js",
+    "seedNotifications": "node scripts/createTestNotifications.js"
   },
   "repository": {
     "type": "git",
