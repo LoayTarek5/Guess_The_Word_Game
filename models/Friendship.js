@@ -67,25 +67,74 @@ friendshipSchema.statics.getFriendsPaginated = async function (userId, limit, sk
 };
 
 friendshipSchema.statics.countOnlineFriends = async function (userId) {
-  const friendships = await this.find({
-    $or: [
-      { requester: userId, status: "accepted" },
-      { recipient: userId, status: "accepted" },
-    ],
-  }).populate("requester recipient", "username avatar status lastSeen stats");
+  try {
+    const result = await this.aggregate([
+      {
+        $match: {
+          $or: [
+            { requester: new mongoose.Types.ObjectId(userId), status: "accepted" },
+            { recipient: new mongoose.Types.ObjectId(userId), status: "accepted" },
+          ],
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "requester",
+          foreignField: "_id",
+          as: "requesterData"
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "recipient", 
+          foreignField: "_id",
+          as: "recipientData"
+        }
+      },
+      {
+        $addFields: {
+          friend: {
+            $cond: [
+              { $eq: ["$requester", new mongoose.Types.ObjectId(userId)] },
+              { $arrayElemAt: ["$recipientData", 0] },
+              { $arrayElemAt: ["$requesterData", 0] }
+            ]
+          }
+        }
+      },
+      {
+        $addFields: {
+          isOnline: {
+            $or: [
+              { $eq: ["$friend.status", "online"] },
+              { $eq: ["$friend.status", "in match"] },
+              {
+                $gt: [
+                  "$friend.lastSeen",
+                  { $subtract: [new Date(), 5 * 60 * 1000] } // 5 minutes ago
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        $match: {
+          isOnline: true
+        }
+      },
+      {
+        $count: "onlineCount"
+      }
+    ]);
 
-  let onlineCount = 0;
-  friendships.forEach((friendship) => {
-    const friend = friendship.requester._id.toString() === userId 
-      ? friendship.recipient 
-      : friendship.requester;
-    
-    if (friend && this.isUserOnline(friend.lastSeen, friend.status)) {
-      onlineCount++;
-    }
-  });
-
-  return onlineCount;
+    return result.length > 0 ? result[0].onlineCount : 0;
+  } catch (error) {
+    console.error("Error counting online friends:", error);
+    return 0;
+  }
 };
 
 friendshipSchema.statics.countFriends = async function (userId) {
