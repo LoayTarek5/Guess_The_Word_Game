@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import Friendship from "../models/Friendship.js";
 import Notification from "../models/Notification.js";
@@ -17,7 +18,7 @@ class FriendController {
           message: "Username is required",
         });
       }
-      
+
       const recipient = await User.findOne({ username });
       if (!recipient) {
         return res.status(404).json({
@@ -39,7 +40,7 @@ class FriendController {
           { requester: recipient._id, recipient: userId },
         ],
       });
-      
+
       if (existingFriendship) {
         let message = "";
         switch (existingFriendship.status) {
@@ -137,6 +138,15 @@ class FriendController {
       const { requestId } = req.params;
       const userId = req.user.userId;
 
+      const currentUser = await User.findById(userId, "username");
+
+      if (!currentUser) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
       const friendship = await Friendship.findOne({
         _id: requestId,
         recipient: userId,
@@ -168,7 +178,7 @@ class FriendController {
         sender: userId,
         type: "friend_accepted",
         title: "Friend Request Accepted",
-        message: `${req.user.username} accepted your friend request`,
+        message: `${currentUser.username} accepted your friend request`,
         data: { friendRequestId: friendship._id },
       });
 
@@ -322,56 +332,141 @@ class FriendController {
       const limit = parseInt(req.query.limit) || 8;
       const skip = (page - 1) * limit;
 
-      // Get total count first
       const totalFriends = await Friendship.countFriends(userId);
 
-      // Get paginated friends
-      const friendsShips = await Friendship.getFriendsPaginated(
-        userId,
-        limit,
-        skip
-      );
+      const friendsShips = await Friendship.aggregate([
+        {
+          $match: {
+            $or: [
+              {
+                requester: new mongoose.Types.ObjectId(userId),
+                status: "accepted",
+              },
+              {
+                recipient: new mongoose.Types.ObjectId(userId),
+                status: "accepted",
+              },
+            ],
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "requester",
+            foreignField: "_id",
+            as: "requesterData",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "recipient",
+            foreignField: "_id",
+            as: "recipientData",
+          },
+        },
+        {
+          $addFields: {
+            friend: {
+              $cond: [
+                { $eq: ["$requester", new mongoose.Types.ObjectId(userId)] },
+                { $arrayElemAt: ["$recipientData", 0] },
+                { $arrayElemAt: ["$requesterData", 0] },
+              ],
+            },
+          },
+        },
+        {
+          $addFields: {
+            isOnline: {
+              $or: [
+                { $eq: ["$friend.status", "online"] },
+                { $eq: ["$friend.status", "in match"] },
+                {
+                  $gt: [
+                    "$friend.lastSeen",
+                    { $subtract: [new Date(), 5 * 60 * 1000] }, // 5 minutes ago
+                  ],
+                },
+              ],
+            },
+            // Calculate sort priority
+            sortPriority: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ["$friend.status", "in match"] }, then: 1 },
+                  { case: { $eq: ["$friend.status", "online"] }, then: 2 },
+                  {
+                    case: {
+                      $gt: [
+                        "$friend.lastSeen",
+                        { $subtract: [new Date(), 5 * 60 * 1000] },
+                      ],
+                    },
+                    then: 3,
+                  },
+                  {
+                    case: {
+                      $gt: [
+                        "$friend.lastSeen",
+                        { $subtract: [new Date(), 60 * 60 * 1000] },
+                      ],
+                    },
+                    then: 4,
+                  },
+                  {
+                    case: {
+                      $gt: [
+                        "$friend.lastSeen",
+                        { $subtract: [new Date(), 24 * 60 * 60 * 1000] },
+                      ],
+                    },
+                    then: 5,
+                  },
+                ],
+                default: 6,
+              },
+            },
+          },
+        },
+        {
+          $sort: {
+            sortPriority: 1, // Online status priority first
+            "friend.lastSeen": -1, // Most recent activity second
+            "friend.username": 1, // Alphabetical third
+          },
+        },
+        {
+          $skip: skip,
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $project: {
+            "friend._id": 1,
+            "friend.username": 1,
+            "friend.avatar": 1,
+            "friend.status": 1,
+            "friend.stats": 1,
+            "friend.lastSeen": 1,
+            isOnline: 1,
+          },
+        },
+      ]);
 
       // Format friends data
       const friends = friendsShips
-        .map((friendShip) => {
-          if (!friendShip.requester || !friendShip.recipient) {
-            console.warn(
-              `Friendship ${friendShip._id} has missing user data, skipping`
-            );
-            return null;
-          }
-
-          const friend =
-            friendShip.requester._id.toString() == userId
-              ? friendShip.recipient
-              : friendShip.requester;
-
-          if (!friend || !friend._id) {
-            console.warn(
-              `Friendship ${friendShip._id} has null friend data, skipping`
-            );
-            return null;
-          }
-
-          return {
-            id: friend._id,
-            username: friend.username,
-            avatar: friend.avatar,
-            status: friend.status,
-            level: friend.stats?.level || 1,
-            lastSeen: friend.lastSeen,
-            isOnline: Friendship.isUserOnline(friend.lastSeen, friend.status),
-          };
-        })
-        .filter(Boolean);
-
-      // Sort friends: online first, then by username
-      friends.sort((a, b) => {
-        if (a.isOnline && !b.isOnline) return -1;
-        if (!a.isOnline && b.isOnline) return 1;
-        return a.username.localeCompare(b.username);
-      });
+        .filter((item) => item.friend && item.friend._id)
+        .map((item) => ({
+          id: item.friend._id,
+          username: item.friend.username,
+          avatar: item.friend.avatar,
+          status: item.friend.status,
+          level: item.friend.stats?.level || 1,
+          lastSeen: item.friend.lastSeen,
+          isOnline: item.isOnline,
+        }));
 
       const totalPages = Math.ceil(totalFriends / limit);
       const onlineFriends = await Friendship.countOnlineFriends(userId);
