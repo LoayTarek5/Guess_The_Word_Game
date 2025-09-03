@@ -279,11 +279,12 @@ async function loadFriendsData(page = 1, limit = 8, isDashboard = false) {
           friendsTotalSpan[3].textContent = `of ${result.count.total} friends`;
         }
 
-        // Update header
-        document.querySelector(
-          ".header-friend h3"
-        ).textContent = `Friends (${result.count.total})`;
-
+        if (!isDashboard) {
+          // Update header
+          document.querySelector(
+            ".header-friend h3"
+          ).textContent = `Friends (${result.count.total})`;
+        }
         // Display friends
         if (friendsContainer) {
           if (friends.length === 0 && pagination.currentPage === 1) {
@@ -343,8 +344,8 @@ async function loadFriendsData(page = 1, limit = 8, isDashboard = false) {
                     <i class="fa-solid fa-user-minus remove-friend-btn" title="Remove friend" data-user-id="${
                       friend.id
                     }" data-username="${
-                    friend.username
-                    }" style="cursor: pointer; color: #dc3545;"></i>
+                  friend.username
+                }" style="cursor: pointer; color: #dc3545;"></i>
                     <span>Remove Friend</span>
                   </div>
                 </div>
