@@ -62,6 +62,9 @@
       </div>
     </section>
     <section class="dash-friends-section">
+      <div class="header-friend">
+        <h3>Friends</h3>
+      </div>
       <div class="friend-content"></div>
     </section>
   </div>
@@ -79,7 +82,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     window.mainUtils.initializeCommon();
     window.dashboardUtils.initializeDashboard();
-    window.friendsUtils.loadFriendsData(1,6,true);
+    window.friendsUtils.loadFriendsData(1, 6, true);
     window.matchHistoryUtils.initializeMatchHistory();
   });
 </script>
