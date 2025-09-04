@@ -15,6 +15,7 @@ import matchHistoryApiRouter from "./routes/matchHistoryApi.js";
 import gameLobbyPage from "./routes/gameLobbyPage.js";
 import notificationsPage from "./routes/notificationsPage.js";
 import notificationsApi from "./routes/notificationsApi.js";
+import roomPage from "./routes/roomPage.js";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
@@ -119,6 +120,9 @@ app.use("/lobby", gameLobbyPage);
 
 app.use("/notifications", notificationsPage);
 app.use("/api/notifications", notificationsApi);
+
+app.use("/room", roomPage);
+
 // 404 handler
 app.use(notFound);
 
