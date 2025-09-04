@@ -1,0 +1,235 @@
+<head>
+  <link rel="stylesheet" href="/style/room.css" />
+</head>
+<div class="main-section">
+  <div class="room-header">
+    <div class="room-top">
+      <a href="/lobby" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        Back to Lobby
+      </a>
+      <div class="room-code-display">
+        ABCDEF
+        <button class="copy-btn" id="copyCode">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
+    </div>
+    <h1 class="room-title">Room Lobby</h1>
+    <p class="room-info">Code: ABCDEF</p>
+  </div>
+  <div class="room-content">
+    <div class="game-room-section">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fas fa-users"></i>
+          Game Room
+        </div>
+        <div class="room-settings">
+          <button class="settings-btn">
+            <i class="fas fa-cog"></i>
+            Settings
+          </button>
+          <button class="invite-btn">
+            <i class="fas fa-user-plus"></i>
+            Invite More
+          </button>
+        </div>
+      </div>
+
+      <p style="color: var(--txt-color); margin-bottom: 24px; font-size: 14px">
+        2/4 players • 5 letters • 6 tries
+      </p>
+
+      <h3
+        style="
+          font-size: 18px;
+          color: var(--main-txt-color);
+          margin-bottom: 16px;
+        "
+      >
+        Players (2/4)
+      </h3>
+
+      <div class="players-grid">
+        <div class="player-card current-player">
+          <div class="crown-icon">
+            <i class="fas fa-crown"></i>
+          </div>
+          <div class="player-card-avatar">Y</div>
+          <div class="player-details">
+            <h3>You</h3>
+            <p class="player-join-time">Joined 03:08 PM</p>
+          </div>
+          <div class="player-status status-ready">Ready</div>
+        </div>
+
+        <div class="player-card joined">
+          <div class="player-card-avatar">A</div>
+          <div class="player-details">
+            <h3>Alex</h3>
+            <p class="player-join-time">Joined 03:11 PM</p>
+          </div>
+          <div class="player-status status-joined">Joined</div>
+        </div>
+
+        <div class="player-card waiting">
+          <div class="player-card-avatar">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <div class="player-details">
+            <h3 class="waiting-text">Waiting for player...</h3>
+          </div>
+        </div>
+
+        <div class="player-card waiting">
+          <div class="player-card-avatar">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <div class="player-details">
+            <h3 class="waiting-text">Waiting for player...</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="game-start-section">
+        <p class="start-message">
+          Ready to start! Players can join during the game.
+        </p>
+        <button class="start-game-btn">
+          <i class="fas fa-play"></i>
+          Start Game
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-section">
+      <div class="chat-header">
+        <i class="fas fa-comments"></i>
+        <h3 class="chat-title">Room Chat</h3>
+      </div>
+
+      <div class="chat-welcome">
+        Room created! Share the code with friends to invite them.
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-message">
+          <div class="message-sender">
+            Alex
+            <span class="message-time">03:11 PM</span>
+          </div>
+          <div class="message-text">Hey! Ready for some word games?</div>
+        </div>
+
+        <div class="chat-message own">
+          <div class="message-sender">
+            You
+            <span class="message-time">09:51 AM</span>
+          </div>
+          <div class="message-text own-message">hey there</div>
+        </div>
+      </div>
+
+      <div class="chat-input-container">
+        <textarea
+          class="chat-input"
+          id="chatInput"
+          rows="2"
+          placeholder="Type a message..."
+        ></textarea>
+        <button class="chat-send-btn" id="sendBtn">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="invite-modal" id="inviteModal" style="display: none">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fas fa-user-plus"></i>
+          Invite Friends
+        </div>
+        <button class="modal-close" id="closeModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="search-container">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            id="friendSearch"
+            placeholder="Search online friends..."
+            class="friend-search-input"
+          />
+        </div>
+
+        <div class="invite-friends-section">
+          <h4>Online Friends (8)</h4>
+          <div class="friends-list" id="friendsList">
+            <div class="friend-item">
+              <div class="friend-avatar">A</div>
+              <div class="friend-info">
+                <span class="friend-name">Alex</span>
+                <span class="friend-status">Online</span>
+              </div>
+              <button class="invite-friend-btn" data-friend="Alex">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+
+            <div class="friend-item">
+              <div class="friend-avatar">S</div>
+              <div class="friend-info">
+                <span class="friend-name">Sarah</span>
+                <span class="friend-status">Online</span>
+              </div>
+              <button class="invite-friend-btn" data-friend="Sarah">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+
+            <div class="friend-item">
+              <div class="friend-avatar">E</div>
+              <div class="friend-info">
+                <span class="friend-name">Emma</span>
+                <span class="friend-status">Online</span>
+              </div>
+              <button class="invite-friend-btn" data-friend="Emma">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+
+            <div class="friend-item">
+              <div class="friend-avatar">C</div>
+              <div class="friend-info">
+                <span class="friend-name">Chris</span>
+                <span class="friend-status">Online</span>
+              </div>
+              <button class="invite-friend-btn" data-friend="Chris">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="cancel-btn" id="cancelBtn">Cancel</button>
+        <button class="invite-btn-modal" id="inviteBtn">Invite</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/main.js"></script>
+<script src="js/room.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    window.mainUtils.initializeCommon();
+    window.roomUtils.initializeRoom();
+  });
+</script>
