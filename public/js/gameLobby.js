@@ -84,6 +84,7 @@ function setEventListener() {
 
   // Create room button
   document.querySelector(".create-btn").addEventListener("click", () => {
+    window.location.href = "/room";
     alert("Room created successfully!");
   });
 
