@@ -16,6 +16,7 @@ import gameLobbyPage from "./routes/gameLobbyPage.js";
 import notificationsPage from "./routes/notificationsPage.js";
 import notificationsApi from "./routes/notificationsApi.js";
 import roomPage from "./routes/roomPage.js";
+import roomApi from "./routes/roomApi.js";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
@@ -122,6 +123,7 @@ app.use("/notifications", notificationsPage);
 app.use("/api/notifications", notificationsApi);
 
 app.use("/room", roomPage);
+app.use("/api/room", roomApi);
 
 // 404 handler
 app.use(notFound);
