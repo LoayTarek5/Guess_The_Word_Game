@@ -99,7 +99,7 @@
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  color: #4a5568;
+  color: var(--main-txt-color);
 }
 
 .room-details {
@@ -108,7 +108,7 @@
 
 .room-name {
   font-weight: 600;
-  color: #2d3748;
+  color: var(--main-txt-color);
   margin-bottom: 4px;
 }
 
@@ -144,6 +144,30 @@
 .badge-easy {
   background: #d1fae5;
   color: #059669;
+}
+
+.difficulty-badge-corner.difficulty-beginner {
+  background: #4caf50;
+}
+
+.difficulty-badge-corner.difficulty-easy {
+  background: #8bc34a;
+}
+
+.difficulty-badge-corner.difficulty-classic {
+  background: #2196f3;
+}
+
+.difficulty-badge-corner.difficulty-normal {
+  background: #03a9f4;
+}
+
+.difficulty-badge-corner.difficulty-hard {
+  background: #ff9800;
+}
+
+.difficulty-badge-corner.difficulty-expert {
+  background: #f44336;
 }
 
 .room-code {
@@ -339,6 +363,24 @@
 
 .create-btn:hover {
   background: #1a202c;
+}
+
+.create-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.create-btn i.fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Join Room Tab */
