@@ -1,8 +1,6 @@
 .room-header {
   background: white;
-  border-radius: 12px;
   margin: 25px 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .room-top {
@@ -55,7 +53,7 @@
   padding: 4px;
   transition: color var(--main-transition);
 }
-.copy-btn i.fa-check{
+.copy-btn i.fa-check {
   color: #28a745;
 }
 .copy-btn:hover {
@@ -183,7 +181,7 @@
   justify-content: center;
   font-weight: bold;
   font-size: 18px;
-  color: var(--txt-color);
+  color: var(--main-txt-color);
 }
 
 .waiting .player-card-avatar {
@@ -666,7 +664,7 @@
   font-size: 14px;
   cursor: pointer;
   transition: all var(--main-transition);
-  flex:1;
+  flex: 1;
   justify-content: center;
 }
 
@@ -685,8 +683,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: background-color var(--main-transition);
-  flex:1;
-
+  flex: 1;
 }
 
 .invite-btn-modal:hover {
