@@ -3,8 +3,10 @@ import { requireAuth } from "../middleware/routeGuards.js";
 
 const router = express.Router();
 
-router.get("/", requireAuth, (req, res) => {
+router.get("/:roomId", requireAuth, (req, res) => {
   res.render("room", {
+    roomId: req.params.roomId,
+    user: req.user,
     pageTitle: "Room Lobby",
     page: "room",
   });
