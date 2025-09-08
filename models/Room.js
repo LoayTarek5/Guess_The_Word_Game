@@ -73,7 +73,7 @@ const roomSchema = new mongoose.Schema({
       },
       isReady: {
         type: Boolean,
-        default: false,
+        default: true,
       },
       isHost: {
         type: Boolean,
@@ -84,6 +84,14 @@ const roomSchema = new mongoose.Schema({
   currentGame: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Game",
+    default: null,
+  },
+  isPrivate: {
+    type: Boolean,
+    default: false,
+  },
+  password: {
+    type: String,
     default: null,
   },
   createdAt: {
@@ -102,7 +110,7 @@ const roomSchema = new mongoose.Schema({
   },
 });
 
-roomSchema.index({ roomCode: 1 });
+// roomSchema.index({ roomCode: 1 });
 roomSchema.index({ status: 1, createdAt: -1 });
 roomSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
@@ -141,7 +149,11 @@ roomSchema.methods.addPlayer = function (userId) {
 };
 
 roomSchema.methods.getPlayer = function (userId) {
-  return this.players.find((p) => p.user.toString() === userId.toString());
+  return this.players.find(
+    (p) =>
+      (p.user._id && p.user._id.toString() === userId.toString()) ||
+      p.user.toString() === userId.toString()
+  );
 };
 
 roomSchema.methods.isHost = function (userId) {
