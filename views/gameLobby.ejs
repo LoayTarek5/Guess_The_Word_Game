@@ -111,6 +111,7 @@
               type="text"
               class="form-input"
               placeholder="My Awesome Word Game"
+              aria-label="room name"
             />
           </div>
 
@@ -128,9 +129,9 @@
             <div class="form-group">
               <label class="form-label">Max Players</label>
               <select class="form-select" id="maxPlayers">
-                <option value="2">2 Players</option>
+                <option value="2" selected>2 Players</option>
                 <option value="3">3 Players</option>
-                <option value="4" selected>4 Players</option>
+                <option value="4">4 Players</option>
               </select>
             </div>
           </div>
@@ -139,7 +140,7 @@
             <div class="form-group">
               <label class="form-label">Language</label>
               <select class="form-select" aria-label="Language select">
-                <option value="en">🇺🇸 US English</option>
+                <option value="en">🇺🇸 English</option>
                 <option value="ar">🇦🇪 العربية (Arabic)</option>
                 <option value="zh">🇨🇳 Chinese (简体中文)</option>
                 <option value="de">🇩🇪 German (Deutsch)</option>
