@@ -18,6 +18,7 @@ const notificationSchema = new mongoose.Schema({
       "friend_accepted",
       "friend_rejected",
       "game_invitation",
+      "room_invitation",
       "game_started",
       "your_turn",
       "turn_reminder",
@@ -70,6 +71,12 @@ const notificationSchema = new mongoose.Schema({
     friendRequestId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Friendship",
+    },
+    roomInvitation: {
+      roomId: String,
+      roomCode: String,
+      roomName: String,
+      inviterId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     },
     // Still allow additional flexible data
     metadata: { type: mongoose.Schema.Types.Mixed },
@@ -125,10 +132,13 @@ notificationSchema.methods.markAsRead = function () {
   return this.save();
 };
 
-notificationSchema.statics.getGameNotifications = function(userId, gameIdString) {
+notificationSchema.statics.getGameNotifications = function (
+  userId,
+  gameIdString
+) {
   return this.find({
     recipient: userId,
-    'data.gameIdString': gameIdString
+    "data.gameIdString": gameIdString,
   }).sort({ createdAt: -1 });
 };
 
