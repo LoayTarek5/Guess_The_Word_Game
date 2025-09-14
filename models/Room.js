@@ -46,7 +46,7 @@ const roomSchema = new mongoose.Schema({
     maxTries: {
       type: Number,
       required: true,
-      enum: [4, 5, 6, 7, 8],
+      enum: [3, 4, 5, 6, 7, 8, 9, 10],
       default: 6,
     },
     difficulty: {
@@ -90,10 +90,6 @@ const roomSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  password: {
-    type: String,
-    default: null,
-  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -122,7 +118,7 @@ roomSchema.virtual("isFull").get(function () {
   return this.players.length >= this.settings.maxPlayers;
 });
 
-roomSchema.methods.addPlayer = function (userId) {
+roomSchema.methods.addPlayer = async function (userId) {
   if (this.isFull) {
     throw new Error("Room is full");
   }
@@ -142,6 +138,7 @@ roomSchema.methods.addPlayer = function (userId) {
 
   if (this.players.length === this.settings.maxPlayers) {
     this.status = "full";
+    await this.invalidateInvitations();
   }
 
   this.lastActivity = Date.now();
@@ -210,6 +207,24 @@ roomSchema.methods.exitRoom = async function (userId) {
     newHost: wasHost && this.players.length > 0 ? this.players[0].user : null,
     remainingPlayers: this.players.length,
   };
+};
+
+roomSchema.methods.invalidateInvitations = async function() {
+  const Notification = mongoose.model('Notification');
+  
+  // When room becomes full or starts game, invalidate all pending invitations
+  await Notification.updateMany(
+    {
+      type: "room_invitation",
+      "data.roomInvitation.roomId": this.roomId,
+      isRead: false
+    },
+    {
+      $set: {
+        expiresAt: new Date(), // Expire immediately
+      }
+    }
+  );
 };
 
 roomSchema.methods.getDifficultyLabel = function () {
