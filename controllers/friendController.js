@@ -3,7 +3,11 @@ import User from "../models/User.js";
 import Friendship from "../models/Friendship.js";
 import Notification from "../models/Notification.js";
 import logger from "../utils/logger.js";
-
+import {
+  emitNotificationToUser,
+  emitNotificationStats,
+} from "../socket/handlers/notificationHandler.js";
+import { broadcastUserStatus } from "../socket/handlers/userStatusHandler.js";
 class FriendController {
   async sendFriendRequest(req, res) {
     try {
@@ -74,7 +78,7 @@ class FriendController {
 
       await friendship.save();
 
-      await Notification.create({
+      const notification = await Notification.create({
         recipient: recipient._id,
         sender: userId,
         type: "friend_request",
@@ -82,6 +86,26 @@ class FriendController {
         message: `${req.user.username} wants to be your friend`,
         data: { friendRequestId: friendship._id },
       });
+
+      const sender = await User.findById(userId).select("username avatar");
+      emitNotificationToUser(recipient._id.toString(), {
+        _id: notification._id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        isRead: false,
+        createdAt: notification.createdAt,
+        sender: {
+          _id: sender._id,
+          username: sender.username,
+          avatar: sender.avatar,
+        },
+        data: notification.data,
+        timeAgo: "Just now",
+      });
+
+      // Update notification stats for recipient
+      emitNotificationStats(recipient._id.toString());
 
       logger.info(
         `Friend request sent from ${req.user.username} to ${username}`
@@ -173,7 +197,7 @@ class FriendController {
       friendship.status = "accepted";
       await friendship.save();
 
-      await Notification.create({
+      const notification = await Notification.create({
         recipient: friendship.requester,
         sender: userId,
         type: "friend_accepted",
@@ -181,6 +205,27 @@ class FriendController {
         message: `${currentUser.username} accepted your friend request`,
         data: { friendRequestId: friendship._id },
       });
+
+      emitNotificationToUser(friendship.requester._id.toString(), {
+        _id: notification._id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        isRead: false,
+        createdAt: notification.createdAt,
+        sender: {
+          _id: currentUser._id,
+          username: currentUser.username,
+        },
+        data: notification.data,
+        timeAgo: "Just now",
+      });
+
+      // Update notification stats for requester
+      emitNotificationStats(friendship.requester._id.toString());
+
+      // Now they're friends, so they should see each other's online status
+      broadcastUserStatus(userId, "online");
 
       logger.info(
         `Friend request accepted: ${friendship.requester.username} -> ${req.user.username}`

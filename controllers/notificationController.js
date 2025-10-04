@@ -1,5 +1,16 @@
 import Notification from "../models/Notification.js";
+import GameInvitation from "../models/GameInvitation.js";
+import Room from "../models/Room.js";
 import friendController from "./friendController.js";
+import { emitPlayerJoined } from "../socket/handlers/roomHandler.js";
+import {
+  emitNotificationToUser,
+  emitNotificationStats,
+  emitNotificationUpdate,
+  emitNotificationDelete,
+} from "../socket/handlers/notificationHandler.js";
+import { getIO } from "../socket/socketServer.js";
+
 import mongoose from "mongoose";
 
 class NotificationController {
@@ -175,6 +186,13 @@ class NotificationController {
         });
       }
 
+      emitNotificationUpdate(userId, notificationId, {
+        isRead: true,
+        readAt: notification.readAt,
+      });
+
+      emitNotificationStats(userId);
+
       res.json({
         success: true,
         message: "Notification marked as read",
@@ -192,14 +210,24 @@ class NotificationController {
     try {
       const userId = req.user.userId;
 
-      await Notification.updateMany(
+      const result = await Notification.updateMany(
         { recipient: userId, isRead: false },
         { $set: { isRead: true, readAt: new Date() } }
       );
 
+      if (result.modifiedCount > 0) {
+        const io = getIO();
+        io.to(`user:${userId}`).emit("notification:markAllRead", {
+          readAt: new Date(),
+          count: result.modifiedCount,
+        });
+        emitNotificationStats(userId);
+      }
+
       res.json({
         success: true,
         message: "All notifications marked as read",
+        count: result.modifiedCount,
       });
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
@@ -233,6 +261,9 @@ class NotificationController {
           .status(404)
           .json({ success: false, message: "Notification not found" });
       }
+
+      emitNotificationDelete(userId, notificationId);
+      emitNotificationStats(userId);
 
       res.json({ success: true, message: "Notification deleted" });
     } catch (error) {
@@ -287,7 +318,7 @@ class NotificationController {
             userId
           );
           break;
-        case "game_invitation":
+        case "room_invitation":
           result = await this.handleGameInvitationAction(
             notification,
             action,
@@ -305,6 +336,11 @@ class NotificationController {
       notification.isRead = true;
       notification.readAt = new Date();
       await notification.save();
+
+      emitNotificationUpdate(userId, notification._id, {
+        isRead: true,
+        readAt: notification.readAt,
+      });
 
       res.json({
         success: true,
@@ -384,30 +420,76 @@ class NotificationController {
   }
 
   async handleGameInvitationAction(notification, action, userId) {
-    const GameInvitation = mongoose.model("GameInvitation");
-
-    const invitation = await GameInvitation.findOne({
-      to: userId,
-      gameId:
-        notification.data.gameIdString || String(notification.data.gameId),
-      status: "pending",
-    });
-
-    if (!invitation) {
-      throw new Error("Game invitation not found or expired");
+    if (!notification.data || !notification.data.roomInvitation) {
+      throw new Error("Invalid room invitation data");
     }
 
+    const { roomId, roomCode } = notification.data.roomInvitation;
+
     if (action === "accept") {
-      await invitation.accept();
+      const room = await Room.findOne({
+        roomCode: roomCode.toUpperCase(),
+        status: { $in: ["waiting"] },
+      });
+
+      if (!room) {
+        throw new Error("Room no longer available");
+      }
+
+      if (room.isFull) {
+        throw new Error("Room is full");
+      }
+
+      // Check if user is already in room
+      if (room.players.some((p) => p.user.toString() === userId)) {
+        return {
+          message: "You are already in this room",
+          data: {
+            roomId: roomId,
+            roomCode: roomCode,
+          },
+        };
+      }
+
+      // Add player to room
+      await room.addPlayer(userId);
+
+      const updatedRoom = await Room.findOne({ roomId: roomId }).populate(
+        "players.user",
+        "username avatar"
+      );
+      const newPlayer = updatedRoom.players.find(
+        (p) => p.user._id.toString() === userId
+      );
+
+      emitPlayerJoined(roomId, {
+        player: {
+          user: {
+            _id: userId,
+            username: newPlayer.user.username,
+            avatar: newPlayer.user.avatar,
+          },
+          isHost: false,
+          joinedAt: newPlayer.joinedAt,
+          isReady: false,
+        },
+        currentPlayers: updatedRoom.currentPlayers,
+        isFull: updatedRoom.isFull,
+      });
+
       return {
-        message: "Game invitation accepted",
-        data: { gameId: invitation.gameId },
+        message: "Joined room successfully",
+        data: {
+          roomId: room.roomId,
+          roomCode: room.roomCode,
+        },
       };
     } else if (action === "decline") {
-      await invitation.decline();
-      return { message: "Game invitation declined" };
+      return {
+        message: "Room invitation declined",
+      };
     } else {
-      throw new Error("Invalid action for game invitation");
+      throw new Error("Invalid action for room invitation");
     }
   }
 
