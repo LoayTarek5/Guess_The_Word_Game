@@ -329,7 +329,7 @@ function stopAllIntervals() {
 
 function startHeartbeat() {
   if (heartbeatInterval) return;
-  console.log("Starting heartbeat..."); // ADD THIS
+  console.log("Starting heartbeat..."); 
 
   heartbeatInterval = setInterval(async () => {
     try {
@@ -339,12 +339,12 @@ function startHeartbeat() {
       });
 
       if (response.ok) {
-        console.log("Heartbeat successful - user should be online"); // ADD THIS
+        console.log("Heartbeat successful - user should be online");
       }
     } catch (error) {
       console.log("Heartbeat failed:", error);
     }
-  }, 1000);
+  }, 10000);
 }
 
 function stopHeartbeat() {

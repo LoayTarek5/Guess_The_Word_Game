@@ -34,5 +34,10 @@ router.get(
   requireAuth,
   roomController.getAvailableFriends.bind(roomController)
 );
+router.put(
+  "/:roomId/settings",
+  requireAuth,
+  roomController.updateRoomSettings.bind(roomController)
+);
 
 export default router;

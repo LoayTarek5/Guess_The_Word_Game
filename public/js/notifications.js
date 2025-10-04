@@ -96,6 +96,7 @@ function getNotificationTypeDisplayName(type) {
     friend_request: "Friend Requests",
     friend_accepted: "Friend Accepted",
     game_invitation: "Game Invitations",
+    room_invitation: "Room Invitations",
     game_started: "Game Started",
     achievement: "Achievements",
     system: "System",
@@ -158,37 +159,51 @@ function displayNotifications(notifications, pagination) {
       let actionsHTML = "";
       if (
         !notification.isRead &&
-        ["friend_request", "game_invitation"].includes(notification.type)
+        ["friend_request", "game_invitation", "room_invitation"].includes(
+          notification.type
+        ) // Add room_invitation
       ) {
         actionsHTML = createActionsHTML(notification);
       }
 
+      // Add room code display for room invitations
+      let additionalInfo = "";
+      if (
+        notification.type === "room_invitation" &&
+        notification.data?.roomInvitation?.roomCode
+      ) {
+        additionalInfo = `<div class="notification-room-code">Room Code: <strong>${notification.data.roomInvitation.roomCode}</strong></div>`;
+      }
+
       return `
-    <div class="notification-item ${unreadClass}" data-id="${notification._id}">
-      <div class="notification-avatar ${typeInfo.class}">
-        <i class="${typeInfo.icon}"></i>
-      </div>
-      <div class="notification-content">
-        <div class="notification-header">
-          <div class="notification-info">
-            <span class="notification-type">${typeInfo.displayName}</span>
-            ${badgeHTML}
-          </div>
-          <div class="notification-icons">
-            <i class="fa-regular fa-trash-can notification-delete" title="Delete notification"></i>
-            ${
-              !notification.isRead
-                ? '<i class="fa-regular fa-envelope-open notification-read" title="Mark as read"></i>'
-                : ""
-            }
-          </div>
+      <div class="notification-item ${unreadClass}" data-id="${
+        notification._id
+      }">
+        <div class="notification-avatar ${typeInfo.class}">
+          <i class="${typeInfo.icon}"></i>
         </div>
-        <div class="notification-text">${notification.message}</div>
-        <div class="notification-time">${notification.timeAgo}</div>
-        ${actionsHTML}
+        <div class="notification-content">
+          <div class="notification-header">
+            <div class="notification-info">
+              <span class="notification-type">${typeInfo.displayName}</span>
+              ${badgeHTML}
+            </div>
+            <div class="notification-icons">
+              <i class="fa-regular fa-trash-can notification-delete" title="Delete notification"></i>
+              ${
+                !notification.isRead
+                  ? '<i class="fa-regular fa-envelope-open notification-read" title="Mark as read"></i>'
+                  : ""
+              }
+            </div>
+          </div>
+          <div class="notification-text">${notification.message}</div>
+          ${additionalInfo}
+          <div class="notification-time">${notification.timeAgo}</div>
+          ${actionsHTML}
+        </div>
       </div>
-    </div>
-  `;
+    `;
     })
     .join("");
 
@@ -434,7 +449,7 @@ function displayNotificationsError(message) {
       <div style="text-align: center; padding: 30px; color: #dc3545;">
         <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
         <p>${message}</p>
-        <button onclick="window.notificationUtils.loadNotifications()" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: inherit;">
+        <button class="notification-btn-err" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: inherit;">
           <i class="fas fa-redo" style="margin-right: 5px;"></i>
           Retry
         </button>
@@ -471,6 +486,11 @@ function getNotificationTypeInfo(type) {
       displayName: "Game Invitation",
       class: "game-invite",
       icon: "fas fa-gamepad",
+    },
+    room_invitation: {
+      displayName: "Room Invitation",
+      class: "room-invite",
+      icon: "fas fa-door-open",
     },
     game_started: {
       displayName: "Game Started",
@@ -520,6 +540,17 @@ function createActionsHTML(notification) {
       <div class="notification-actions">
         <button class="action-btn join-game" data-action="accept">
           <i class="fas fa-gamepad"></i> Join Game
+        </button>
+        <button class="action-btn decline" data-action="decline">
+          <i class="fas fa-times"></i> Decline
+        </button>
+      </div>
+    `;
+  } else if (notification.type === "room_invitation") {
+    return `
+      <div class="notification-actions">
+        <button class="action-btn join-room" data-action="accept">
+          <i class="fas fa-door-open"></i> Join Room
         </button>
         <button class="action-btn decline" data-action="decline">
           <i class="fas fa-times"></i> Decline
@@ -648,9 +679,18 @@ async function handleNotificationAction(event) {
       const result = await response.json();
 
       // Handle successful action
-      if (action === "accept" && result.data?.gameId) {
-        // Redirect to game if it's a game invitation
-        window.location.href = `/game/${result.data.gameId}`;
+      if (action === "accept" && result.data?.roomId) {
+        if (result.data.roomCode) {
+          sessionStorage.setItem(
+            "currentRoom",
+            JSON.stringify({
+              roomId: result.data.roomId,
+              roomCode: result.data.roomCode,
+              joined: true,
+            })
+          );
+        }
+        window.location.href = `/room/${result.data.roomId}`;
         return;
       }
 
@@ -770,6 +810,11 @@ function setupNotificationsEventListeners() {
   }
 
   notificationsContent.addEventListener("click", (e) => {
+
+    if(e.target.classList.contains("notification-btn-err")) {
+      loadNotifications();
+    }
+
     const btn = e.target.closest("button");
     const icon = e.target.closest("i");
 
@@ -1037,6 +1082,7 @@ window.notificationUtils = {
   getNotificationTypeInfo,
   startNotificationsAutoRefresh,
   stopNotificationsAutoRefresh,
+  displayNotificationStats,
   setupNotificationsEventListeners,
   initializeNotifications,
   getCurrentPage: () => currentNotificationsPage,
