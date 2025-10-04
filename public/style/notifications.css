@@ -310,6 +310,26 @@
   font-size: 12px;
 }
 
+.notification-avatar.room-invite {
+  background-color: #8b5cf6; 
+}
+
+.notification-room-code {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #4b5563;
+  display: inline-block;
+}
+
+.notification-room-code strong {
+  color: #1f2937;
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
 .notification-actions {
   display: flex;
   gap: 10px;

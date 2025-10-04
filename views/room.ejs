@@ -2,6 +2,33 @@
   <link rel="stylesheet" href="/style/room.css" />
 </head>
 <div class="main-section">
+  <div class="leave-modal" id="leaveModal" style="display: none">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fas fa-sign-out-alt"></i>
+          Leave Room?
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <p id="leaveMessage">Are you sure you want to leave this room?</p>
+        <div class="leave-warning" id="leaveWarning" style="display: none">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="warningText"></span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="cancel-btn" id="cancelLeave">Cancel</button>
+        <button class="leave-btn-modal" id="confirmLeave">
+          <i class="fas fa-sign-out-alt"></i>
+          Leave Room
+        </button>
+      </div>
+    </div>
+  </div>
   <div class="room-header">
     <div class="room-top">
       <a href="/lobby" class="back-button">
@@ -9,7 +36,7 @@
         Back to Lobby
       </a>
       <div class="room-code-display">
-        ABCDEF
+        <span class="room-code-text"></span>
         <button class="copy-btn" id="copyCode">
           <i class="fas fa-copy"></i>
         </button>
@@ -51,46 +78,7 @@
         Players (2/4)
       </h3>
 
-      <div class="players-grid">
-        <div class="player-card current-player">
-          <div class="crown-icon">
-            <i class="fas fa-crown"></i>
-          </div>
-          <div class="player-card-avatar">Y</div>
-          <div class="player-details">
-            <h3>You</h3>
-            <p class="player-join-time">Joined 03:08 PM</p>
-          </div>
-          <div class="player-status status-ready">Ready</div>
-        </div>
-
-        <div class="player-card joined">
-          <div class="player-card-avatar">A</div>
-          <div class="player-details">
-            <h3>Alex</h3>
-            <p class="player-join-time">Joined 03:11 PM</p>
-          </div>
-          <div class="player-status status-joined">Joined</div>
-        </div>
-
-        <div class="player-card waiting">
-          <div class="player-card-avatar">
-            <i class="fas fa-user-plus"></i>
-          </div>
-          <div class="player-details">
-            <h3 class="waiting-text">Waiting for player...</h3>
-          </div>
-        </div>
-
-        <div class="player-card waiting">
-          <div class="player-card-avatar">
-            <i class="fas fa-user-plus"></i>
-          </div>
-          <div class="player-details">
-            <h3 class="waiting-text">Waiting for player...</h3>
-          </div>
-        </div>
-      </div>
+      <div class="players-grid"></div>
 
       <div class="game-start-section">
         <p class="start-message">
@@ -151,6 +139,10 @@
         <div class="modal-title">
           <i class="fas fa-user-plus"></i>
           Invite Friends
+          <span
+            id="onlineFriendsCount"
+            style="font-size: 14px; color: #999; margin-left: 10px"
+          ></span>
         </div>
         <button class="modal-close" id="closeModal">
           <i class="fas fa-times"></i>
@@ -224,11 +216,171 @@
       </div>
     </div>
   </div>
+  <div class="settings-modal" id="settingsModal" style="display: none">
+    <div class="modal-overlay"></div>
+    <div class="modal-content settings-modal-content">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fas fa-cog"></i>
+          Room Settings
+        </div>
+        <button class="modal-close" id="closeSettingsModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body settings-modal-body">
+        <p class="settings-description">Modify game settings for this room</p>
+
+        <!-- Difficulty Preview -->
+        <div class="difficulty-preview">
+          <div class="difficulty-header">
+            <span>Difficulty Preview</span>
+            <span class="difficulty-badge">Classic</span>
+          </div>
+          <div class="difficulty-stats">
+            <div class="difficulty-stat">
+              <div class="stat-number">5</div>
+              <div class="stat-label">Letters</div>
+            </div>
+            <div class="difficulty-stat">
+              <div class="stat-number">6</div>
+              <div class="stat-label">Tries</div>
+            </div>
+            <div class="difficulty-stat">
+              <div class="stat-number">2</div>
+              <div class="stat-label">Max Players</div>
+            </div>
+            <div class="difficulty-stat">
+              <div class="stat-number">US</div>
+              <div class="stat-label">Language</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Grid -->
+        <div class="settings-grid">
+          <!-- Word Length -->
+          <div class="setting-card">
+            <div class="setting-icon">
+              <i class="fas fa-font"></i>
+            </div>
+            <div class="setting-content">
+              <h4>Word Length</h4>
+              <p>Choose number of letters in words</p>
+              <select class="setting-select" id="wordLengthSelect">
+                <option value="4">4 Letters</option>
+                <option value="5" selected>5 Letters (Normal)</option>
+                <option value="6">6 Letters</option>
+                <option value="7">7 Letters</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Maximum Tries -->
+          <div class="setting-card">
+            <div class="setting-icon green">
+              <i class="fas fa-target"></i>
+            </div>
+            <div class="setting-content">
+              <h4>Maximum Tries</h4>
+              <p>Number of guesses allowed</p>
+              <div class="number-input-container">
+                <button class="number-btn" id="decreaseTries">-</button>
+                <span class="number-display" id="triesDisplay">6</span>
+                <span class="number-label">tries</span>
+                <button class="number-btn" id="increaseTries">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Max Players -->
+          <div class="setting-card">
+            <div class="setting-icon pink">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="setting-content">
+              <h4>Max Players</h4>
+              <p>Maximum number of players</p>
+              <div class="player-options">
+                <button class="player-option selected" data-players="2">
+                  2 Players
+                </button>
+                <button class="player-option" data-players="3">
+                  3 Players
+                </button>
+                <button class="player-option" data-players="4">
+                  4 Players
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Language -->
+          <div class="setting-card">
+            <div class="setting-icon orange">
+              <i class="fas fa-globe"></i>
+            </div>
+            <div class="setting-content">
+              <h4>Language</h4>
+              <p>Game language and word list</p>
+              <select class="setting-select" id="languageSelect">
+                <option value="en" selected>🇺🇸 English</option>
+                <option value="ar">🇦🇪 العربية (Arabic)</option>
+                <option value="zh">🇨🇳 Chinese (简体中文)</option>
+                <option value="de">🇩🇪 German (Deutsch)</option>
+                <option value="es">🇪🇸 Spanish</option>
+                <option value="fr">🇫🇷 French</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="quick-presets">
+          <h4>Quick Presets</h4>
+          <p>Choose from popular game configurations</p>
+          <div class="preset-options">
+            <button class="preset-option" data-preset="easy">
+              <h5>Easy Mode</h5>
+              <span>Perfect for beginners</span>
+            </button>
+            <button class="preset-option selected" data-preset="classic">
+              <h5>Classic</h5>
+              <span>Classic word game</span>
+            </button>
+            <button class="preset-option" data-preset="challenge">
+              <h5>Challenge</h5>
+              <span>For experienced players</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="cancel-btn" id="cancelSettingsBtn">Cancel</button>
+        <button class="save-settings-btn" id="saveSettingsBtn">
+          <i class="fas fa-cog"></i>
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
-<script src="js/main.js"></script>
-<script src="js/room.js"></script>
+<script src="/js/main.js"></script>
+<script src="/js/room.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    if (window.socketManager && !window.socketManager.connected) {
+      window.socketManager.connect();
+    }
+
+    // Then initialize room after DOM is ready
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof initializeRoom === "function") {
+        initializeRoom();
+      }
+    });
     window.mainUtils.initializeCommon();
     window.roomUtils.initializeRoom();
   });

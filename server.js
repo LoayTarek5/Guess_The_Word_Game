@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express from "express";
+import { createServer } from "http";
+import { initializeSocket } from "./socket/socketServer.js";
 import expressLayouts from "express-ejs-layouts";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -35,7 +37,7 @@ app.set("views", path.join(__dirname, "views"));
 app.use(expressLayouts);
 app.set("layout", "layouts/layout");
 
-// Helmet to Secure content Policy 
+// Helmet to Secure content Policy
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -60,8 +62,18 @@ app.use(
           "https://cdnjs.cloudflare.com",
           "https://fonts.gstatic.com",
         ],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-        connectSrc: ["'self'", process.env.CLIENT_URL],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://cdn.jsdelivr.net",
+          "https://cdn.socket.io",
+        ],
+        connectSrc: [
+          "'self'",
+          process.env.CLIENT_URL,
+          "https://cdn.jsdelivr.net",
+          "https://cdn.socket.io",
+        ],
       },
     },
   })
@@ -131,6 +143,9 @@ app.use(notFound);
 // Error handler
 app.use(errorHandler);
 
+const server = createServer(app);
+initializeSocket(server);
+
 // setup Mongo database
 mongoose
   .connect(process.env.MONGODB_URI)
@@ -156,6 +171,6 @@ mongoose
   })
   .catch((err) => console.error("❌ MongoDB error:", err));
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log("Server is Running on port: " + PORT);
 });
