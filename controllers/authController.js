@@ -20,6 +20,7 @@ class AuthController {
       username: user.username,
       email: user.email,
       avatar: user.avatar,
+      currentRoomId: user.currentRoomId,
       status: user.status,
       stats: user.stats,
       createdAt: user.createdAt,
@@ -219,7 +220,7 @@ class AuthController {
       if (user) {
         user.lastSeen = new Date();
         if (user.status !== "in match") {
-          user.status = "online"; 
+          user.status = "online";
         }
         await user.save();
       }
