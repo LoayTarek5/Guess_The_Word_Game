@@ -7,6 +7,11 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     avatar: { type: String, default: "/images/user-solid.svg" },
+    currentRoomId: {
+      type: String,
+      default: null,
+      index: true,
+    },
     status: {
       type: String,
       enum: ["online", "offline", "in match"],
@@ -37,18 +42,15 @@ userSchema.pre("save", async function (next) {
   return next();
 });
 
-userSchema.pre('deleteMany', async function(next) {
+userSchema.pre("deleteMany", async function (next) {
   try {
     const users = await this.model.find(this.getQuery());
-    const userIds = users.map(user => user._id);
-    
+    const userIds = users.map((user) => user._id);
+
     if (userIds.length > 0) {
-      const Friendship = mongoose.model('Friendship');
+      const Friendship = mongoose.model("Friendship");
       await Friendship.deleteMany({
-        $or: [
-          { requester: { $in: userIds } },
-          { recipient: { $in: userIds } }
-        ]
+        $or: [{ requester: { $in: userIds } }, { recipient: { $in: userIds } }],
       });
       console.log(`Cleaned up friendships for ${userIds.length} deleted users`);
     }
@@ -59,36 +61,33 @@ userSchema.pre('deleteMany', async function(next) {
 });
 
 // Pre-remove middleware to cleanup friendships
-userSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
-  try {
-    const Friendship = mongoose.model('Friendship');
-    await Friendship.deleteMany({
-      $or: [
-        { requester: this._id },
-        { recipient: this._id }
-      ]
-    });
-    console.log(`Cleaned up friendships for deleted user: ${this.username}`);
-    next();
-  } catch (error) {
-    next(error);
+userSchema.pre(
+  "deleteOne",
+  { document: true, query: false },
+  async function (next) {
+    try {
+      const Friendship = mongoose.model("Friendship");
+      await Friendship.deleteMany({
+        $or: [{ requester: this._id }, { recipient: this._id }],
+      });
+      console.log(`Cleaned up friendships for deleted user: ${this.username}`);
+      next();
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // Also handle findOneAndDelete
-userSchema.post('findOneAndDelete', async function(doc) {
+userSchema.post("findOneAndDelete", async function (doc) {
   if (doc) {
-    const Friendship = mongoose.model('Friendship');
+    const Friendship = mongoose.model("Friendship");
     await Friendship.deleteMany({
-      $or: [
-        { requester: doc._id },
-        { recipient: doc._id }
-      ]
+      $or: [{ requester: doc._id }, { recipient: doc._id }],
     });
     console.log(`Cleaned up friendships for deleted user: ${doc.username}`);
   }
 });
-
 
 userSchema.methods.comparePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
