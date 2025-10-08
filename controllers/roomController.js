@@ -26,7 +26,6 @@ class RoomController {
           message: "User not found",
         });
       }
-
       const roomId = new mongoose.Types.ObjectId().toString();
       const roomCode = await Room.generateRoomCode();
 
@@ -54,11 +53,17 @@ class RoomController {
         lastActivity: new Date(),
       });
 
+      await User.findByIdAndUpdate(userId, {
+        currentRoomId: roomId,
+      });
+
       await room.save();
 
       await room.populate("players.user", "username avatar");
 
-      logger.info(`Room created: ${roomCode} by user: ${userId}`);
+      logger.info(
+        `Room created: ${roomCode} by user: ${userId} with Room ID: ${roomId}`
+      );
 
       res.status(201).json({
         success: true,
@@ -94,6 +99,9 @@ class RoomController {
         .populate("players.user", "username avatar");
 
       if (!room) {
+        await User.findByIdAndUpdate(userId, {
+          currentRoomId: null,
+        });
         return res.status(404).json({
           success: false,
           message: "Room not found",
