@@ -141,6 +141,10 @@ roomSchema.methods.addPlayer = async function (userId) {
     await this.invalidateInvitations();
   }
 
+  await mongoose.model("User").findByIdAndUpdate(userId, {
+    currentRoomId: this.roomId,
+  });
+
   this.lastActivity = Date.now();
   return this.save();
 };
@@ -197,6 +201,10 @@ roomSchema.methods.exitRoom = async function (userId) {
     }
   }
 
+  await mongoose.model("User").findByIdAndUpdate(userId, {
+    currentRoomId: null,
+  });
+
   this.lastActivity = Date.now();
 
   await this.save();
@@ -209,20 +217,20 @@ roomSchema.methods.exitRoom = async function (userId) {
   };
 };
 
-roomSchema.methods.invalidateInvitations = async function() {
-  const Notification = mongoose.model('Notification');
-  
+roomSchema.methods.invalidateInvitations = async function () {
+  const Notification = mongoose.model("Notification");
+
   // When room becomes full or starts game, invalidate all pending invitations
   await Notification.updateMany(
     {
       type: "room_invitation",
       "data.roomInvitation.roomId": this.roomId,
-      isRead: false
+      isRead: false,
     },
     {
       $set: {
         expiresAt: new Date(), // Expire immediately
-      }
+      },
     }
   );
 };
