@@ -348,14 +348,16 @@ class GameController {
       let tempStreak = 0;
       let isStreakActive = true;
 
-      // Process each game
       games.forEach((game, index) => {
-        const currUser = game.players.find(
-          (player) => player.user._id.toString() === userId
-        );
-        const opponent = game.players.find(
-          (player) => player.user._id.toString() !== userId
-        );
+        const currUser = game.players.find((player) => {
+          const pid = player.user?._id ?? player.user;
+          return pid && pid.toString() === userId;
+        });
+
+        const opponent = game.players.find((player) => {
+          const pid = player.user?._id ?? player.user;
+          return pid && pid.toString() !== userId;
+        });
 
         // Skip if we can't find both players
         if (!currUser || !opponent) {
