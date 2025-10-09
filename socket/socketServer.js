@@ -6,6 +6,8 @@ import {
   broadcastUserStatus,
 } from "./handlers/userStatusHandler.js";
 import { setupNotificationHandlers } from "./handlers/notificationHandler.js";
+import { setupChatHandlers } from "./handlers/chatHandler.js";
+
 import User from "../models/User.js";
 
 let io;
@@ -35,6 +37,7 @@ export const initializeSocket = async (server) => {
     setupRoomHandlers(socket);
     setupUserStatusHandlers(socket);
     setupNotificationHandlers(socket);
+    setupChatHandlers(socket);
 
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
