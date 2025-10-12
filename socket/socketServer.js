@@ -6,7 +6,7 @@ import {
   broadcastUserStatus,
 } from "./handlers/userStatusHandler.js";
 import { setupNotificationHandlers } from "./handlers/notificationHandler.js";
-import { setupChatHandlers } from "./handlers/chatHandler.js";
+import setupChatHandlers from "./handlers/chatHandler.js";
 
 import User from "../models/User.js";
 
