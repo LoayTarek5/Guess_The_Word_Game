@@ -557,6 +557,7 @@ function sendMessage(chatMessages, chatInput) {
     showNotification("Connection lost. Please refresh the page.", "error");
   }
 }
+
 function initInviteModal() {
   const inviteBtn = document.querySelector(".invite-btn");
   const modal = document.getElementById("inviteModal");
@@ -890,6 +891,20 @@ function initializeChatSocket() {
     window.socketManager.on("chat:userTyping", (data) => {
       handleTypingIndicator(data);
     });
+
+    window.socketManager.on("chat:messageSent", (data) => {
+      if (data.success) {
+        console.log("Message sent successfully");
+      }
+    });
+
+    window.socketManager.on("chat:error", (error) => {
+      showNotification(error.message, "error");
+    });
+
+    window.socketManager.on("chat:history", (data) => {
+      displayChatHistory(data.messages);
+    });
   }
 
   function displayChatMessage(data) {
@@ -928,11 +943,34 @@ function initializeChatSocket() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
+  function loadChatHistory() {
+    if (!currentRoom || !window.socketManager) return;
+
+    window.socketManager.emit("chat:loadHistory", {
+      roomId: currentRoom.roomId,
+      limit: 50,
+    });
+  }
+
+  function displayChatHistory(messages) {
+    const chatMessages = document.getElementById("chatMessages");
+
+    chatMessages.innerHTML = "";
+
+    messages.forEach((message) => {
+      displayChatMessage(message);
+    });
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
   function handleTypingIndicator(data) {
     console.log(
       `${data.username} is ${data.isTyping ? "typing" : "stopped typing"}`
     );
   }
+
+  loadChatHistory();
 }
 
 function refreshAvailableFriends() {
