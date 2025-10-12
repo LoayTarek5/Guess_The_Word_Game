@@ -141,6 +141,43 @@ export default function setupChatHandler(socket) {
     }
   });
 
+  socket.on("chat:typing", async (data) => {
+    try {
+      const { roomId, gameId, friendshipId, isTyping } = data;
+      const userId = socket.userId;
+      const io = getIO();
+
+      let broadcastRoom;
+      let username = socket.username || "User";
+
+      if (roomId) {
+        broadcastRoom = `room:${roomId}`;
+      } else if (gameId) {
+        broadcastRoom = `game:${gameId}`;
+      } else if (friendshipId) {
+        const friendship = await Friendship.findById(friendshipId);
+        if (!friendship) return;
+        
+        const otherUserId = friendship.requester.toString() === userId.toString() 
+          ? friendship.recipient 
+          : friendship.requester;
+        broadcastRoom = `user:${otherUserId}`;
+      } else {
+        return;
+      }
+
+      // Broadcast typing status (exclude sender)
+      socket.to(broadcastRoom).emit("chat:userTyping", {
+        userId,
+        username,
+        isTyping,
+      });
+
+    } catch (error) {
+      console.error("Error handling typing indicator:", error);
+    }
+  });
+
   socket.on("chat:loadHistory", async (data) => {
     try {
       const { roomId, gameId, friendshipId, limit = 50, before } = data;
