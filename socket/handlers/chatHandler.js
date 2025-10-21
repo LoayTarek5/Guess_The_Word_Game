@@ -24,7 +24,7 @@ export default function setupChatHandler(socket) {
       let contextRef = {};
       let broadcastRoom;
       if (roomId) {
-        const room = Room.findOne({ roomId }).populate(
+        const room = await Room.findOne({ roomId }).populate(
           "players.user",
           "username avatar"
         );
@@ -32,14 +32,17 @@ export default function setupChatHandler(socket) {
         if (!room) {
           return socket.emit("chat:error", { message: "Room not found" });
         }
+
         const inRoom = room.players.some(
           (player) => player.user._id.toString() === userId.toString()
         );
+
         if (!inRoom) {
           return socket.emit("chat:error", {
             message: "You are not in this room",
           });
         }
+
         chatType = "room";
         contextRef = { room: room._id };
         broadcastRoom = `room:${roomId}`;
@@ -157,10 +160,11 @@ export default function setupChatHandler(socket) {
       } else if (friendshipId) {
         const friendship = await Friendship.findById(friendshipId);
         if (!friendship) return;
-        
-        const otherUserId = friendship.requester.toString() === userId.toString() 
-          ? friendship.recipient 
-          : friendship.requester;
+
+        const otherUserId =
+          friendship.requester.toString() === userId.toString()
+            ? friendship.recipient
+            : friendship.requester;
         broadcastRoom = `user:${otherUserId}`;
       } else {
         return;
@@ -172,7 +176,6 @@ export default function setupChatHandler(socket) {
         username,
         isTyping,
       });
-
     } catch (error) {
       console.error("Error handling typing indicator:", error);
     }
@@ -237,11 +240,23 @@ export default function setupChatHandler(socket) {
         .populate("sender", "username avatar")
         .lean();
 
+      const formattedMessages = messages.map((msg) => ({
+        _id: msg._id,
+        userId: msg.sender._id,
+        username: msg.sender.username,
+        avatar: msg.sender.avatar,
+        message: msg.message,
+        type: msg.type,
+        chatType: msg.chatType,
+        timestamp: msg.timestamp,
+        isEdited: msg.isEdited || false,
+      }));
+
       // Reverse to get chronological order
-      messages.reverse();
+      formattedMessages.reverse();
 
       socket.emit("chat:history", {
-        messages,
+        messages: formattedMessages,
         hasMore: messages.length === limit,
       });
     } catch (error) {
