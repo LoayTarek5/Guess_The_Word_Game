@@ -4,7 +4,7 @@ const chatMessageSchema = new mongoose.Schema({
   game: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Game",
-    required: true,
+    required: false,
   },
   room: {
     type: mongoose.Schema.Types.ObjectId,
@@ -75,7 +75,7 @@ chatMessageSchema.statics.getDirectMessages = async function (
 ) {
   return await this.find({
     friendship: friendshipId,
-    chatContext: "direct",
+    chatType: "direct",
   })
     .sort({ timestamp: -1 })
     .limit(limit)
@@ -85,7 +85,7 @@ chatMessageSchema.statics.getDirectMessages = async function (
 chatMessageSchema.statics.getLastMessage = async function (friendshipId) {
   return await this.findOne({
     friendship: friendshipId,
-    chatContext: "direct",
+    chatType: "direct",
   })
     .sort({ timestamp: -1 })
     .populate("sender", "username avatar");
