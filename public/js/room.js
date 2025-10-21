@@ -534,30 +534,6 @@ function showCopyFeedback(copyBtn) {
   }, 2000);
 }
 
-function sendMessage(chatMessages, chatInput) {
-  const message = chatInput.value.trim();
-  if (!message || !currentRoom) return;
-
-  if (message.length > 500) {
-    showNotification("Message too long (max 500 characters)", "error");
-    return false;
-  }
-
-  // Send via socket instead of local display
-  if (window.socketManager && window.socketManager.connected) {
-    window.socketManager.emit("chat:sendMessage", {
-      roomId: currentRoom.roomId,
-      message: message,
-    });
-
-    chatInput.value = "";
-    const sendBtn = document.getElementById("sendBtn");
-    if (sendBtn) sendBtn.classList.remove("active");
-  } else {
-    showNotification("Connection lost. Please refresh the page.", "error");
-  }
-}
-
 function initInviteModal() {
   const inviteBtn = document.querySelector(".invite-btn");
   const modal = document.getElementById("inviteModal");
@@ -877,6 +853,31 @@ function initInviteModal() {
   });
 }
 
+function sendMessage(chatMessages, chatInput) {
+  const message = chatInput.value.trim();
+  if (!message || !currentRoom) return;
+
+  if (message.length > 500) {
+    showNotification("Message too long (max 500 characters)", "error");
+    return false;
+  }
+
+  // Send via socket instead of local display
+  if (window.socketManager && window.socketManager.connected) {
+    window.socketManager.emit("chat:sendMessage", {
+      roomId: currentRoom.roomId,
+      message: message,
+      type: "text",
+    });
+
+    chatInput.value = "";
+    const sendBtn = document.getElementById("sendBtn");
+    if (sendBtn) sendBtn.classList.remove("active");
+  } else {
+    showNotification("Connection lost. Please refresh the page.", "error");
+  }
+}
+
 function initializeChatSocket() {
   const chatInput = document.getElementById("chatInput");
   const sendBtn = document.getElementById("sendBtn");
@@ -888,9 +889,9 @@ function initializeChatSocket() {
       displayChatMessage(message);
     });
 
-    window.socketManager.on("chat:userTyping", (data) => {
-      handleTypingIndicator(data);
-    });
+    // window.socketManager.on("chat:userTyping", (data) => {
+    //   handleTypingIndicator(data);
+    // });
 
     window.socketManager.on("chat:messageSent", (data) => {
       if (data.success) {
@@ -908,11 +909,12 @@ function initializeChatSocket() {
   }
 
   function displayChatMessage(data) {
+    const chatMessages = document.getElementById("chatMessages");
     const messageEl = document.createElement("div");
     const isOwnMessage = data.userId === currentUserId;
 
     messageEl.className = `chat-message ${isOwnMessage ? "own" : ""} ${
-      data.type || "user"
+      data.type || "text"
     }`;
 
     const time = new Date(data.timestamp).toLocaleTimeString([], {
@@ -956,29 +958,20 @@ function initializeChatSocket() {
     const chatMessages = document.getElementById("chatMessages");
 
     chatMessages.innerHTML = "";
-
     messages.forEach((message) => {
       displayChatMessage(message);
     });
 
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
-
+  /*
   function handleTypingIndicator(data) {
     console.log(
       `${data.username} is ${data.isTyping ? "typing" : "stopped typing"}`
     );
   }
-
+  */
   loadChatHistory();
-}
-
-function refreshAvailableFriends() {
-  const modal = document.getElementById("inviteModal");
-  if (modal && modal.style.display === "flex") {
-    // If modal is open, reload friends
-    loadAvailableFriends();
-  }
 }
 
 function setupRoomEventListeners() {
@@ -1000,7 +993,7 @@ function setupRoomEventListeners() {
     const hasText = chatInput.value.trim().length > 0;
     sendBtn.classList.toggle("active", hasText);
 
-    // Emit typing status
+    /* Emit typing status
     if (window.socketManager && currentRoom) {
       window.socketManager.emit("chat:typing", {
         roomId: currentRoom.roomId,
@@ -1019,6 +1012,7 @@ function setupRoomEventListeners() {
         }, 2000);
       }
     }
+    */
   });
 
   chatInput.addEventListener("keypress", (e) => {
@@ -1028,6 +1022,14 @@ function setupRoomEventListeners() {
   sendBtn.addEventListener("click", () => {
     sendMessage(chatMessages, chatInput);
   });
+}
+
+function refreshAvailableFriends() {
+  const modal = document.getElementById("inviteModal");
+  if (modal && modal.style.display === "flex") {
+    // If modal is open, reload friends
+    loadAvailableFriends();
+  }
 }
 
 async function fetchRoomDetails() {
