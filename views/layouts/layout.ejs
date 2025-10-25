@@ -128,9 +128,15 @@
             <i class="fa-solid fa-sliders dashboard-btn"></i>
             <%= typeof pageTitle !== 'undefined' ? pageTitle : 'Dashboard' %>
           </p>
-          <i class="fa-solid fa-bell notifications-bell" aria-hidden="true"
-            ><span class="message-number"></span
-          ></i>
+          <a
+            href="/notifications"
+            class="<%= typeof page !== 'undefined' && page === 'notifications' ? 'active' : '' %>"
+            style="color: var(--main-color-alt);"
+          >
+            <i class="fa-solid fa-bell notifications-bell" aria-hidden="true"
+              ><span class="message-number"></span
+            ></i>
+          </a>
         </header>
         <%- body %>
       </main>
