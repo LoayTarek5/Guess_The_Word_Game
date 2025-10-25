@@ -14,6 +14,93 @@ import {
 import { emitNotificationToUser } from "../socket/handlers/notificationHandler.js";
 
 class RoomController {
+  async browseRooms(req, res) {
+    try {
+      const userId = req.user.userId;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 5;
+      const skip = (page - 1) * limit;
+
+      const query = {
+        status: { $in: ["waiting"] },
+        isPrivate: false,
+        expiresAt: { $gt: new Date() },
+      };
+
+      const rooms = Room.find(query)
+        .populate("creator", "username avatar")
+        .populate("players.user", "username avatar")
+        .sort({ createdAt: -1, lastActivity: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const availableRooms = rooms.filter((room) => {
+        room.players.length < room.settings.maxPlayers;
+      });
+      const totalRooms = await Room.countDocuments(query);
+
+      const totalPages = Math.ceil(totalRooms / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      const formattedRooms = availableRooms.map((room) => {
+        const currentPlayers = room.players?.length || 0;
+        const maxPlayers = room.settings?.maxPlayers || 2;
+        const isFull = currentPlayers >= maxPlayers;
+        const creatorName = room.creator?.username || "Unknown";
+        const creatorAvatar =
+          room.creator?.avatar || creatorName.charAt(0).toUpperCase();
+
+        const timeAgo = this.getTimeAgo(room.createdAt);
+
+        return {
+          roomId: room.roomId,
+          roomCode: room.roomCode,
+          roomName: room.roomName || `${creatorName}'s Room`,
+          creator: {
+            username: creatorName,
+            avatar: creatorAvatar,
+          },
+          settings: {
+            wordLength: room.settings?.wordLength || 5,
+            maxTries: room.settings?.maxTries || 6,
+            maxPlayers: maxPlayers,
+            difficulty: room.settings?.difficulty || "normal",
+            language: room.settings?.language || "en",
+          },
+          currentPlayers,
+          maxPlayers,
+          isFull,
+          status: room.status,
+          timeAgo,
+          createdAt: room.createdAt,
+        };
+      });
+
+      res.json({
+        success: true,
+        rooms: formattedRooms,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalRooms,
+          limit,
+          hasNextPage,
+          hasPrevPage,
+          startIndex: skip + 1,
+          endIndex: Math.min(skip + limit, totalRooms),
+        },
+      });
+    } catch (error) {
+      logger.error("Browse rooms error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to load rooms",
+      });
+    }
+  }
+
   async createRoom(req, res) {
     try {
       const userId = req.user.userId;
@@ -801,6 +888,15 @@ class RoomController {
     if (difficultyScore <= 15) return "Classic";
     if (difficultyScore <= 17) return "Hard";
     return "Expert";
+  }
+
+  getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+
+    if (seconds < 60) return "Just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return `${Math.floor(seconds / 86400)} days ago`;
   }
 }
 
