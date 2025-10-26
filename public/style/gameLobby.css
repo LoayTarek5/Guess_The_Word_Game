@@ -202,7 +202,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -210,8 +210,8 @@
   color: #10b981;
 }
 
-.status-progress {
-  color: #f59e0b;
+.status-full {
+  color: #f44336;
 }
 
 .status-dot {
