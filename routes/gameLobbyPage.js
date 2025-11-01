@@ -1,5 +1,7 @@
 import express from "express";
 import { requireAuth } from "../middleware/routeGuards.js";
+import roomController from "../controllers/roomController.js";
+
 import User from "../models/User.js";
 
 const router = express.Router();
@@ -9,7 +11,7 @@ router.get("/", requireAuth, async (req, res) => {
     const userId = req.user.userId;
     // Check if user has a currentRoomId
     const user = await User.findById(userId).select("currentRoomId").lean();
-    
+
     if (user?.currentRoomId) {
       return res.redirect(`/room/${user.currentRoomId}`);
     }
@@ -26,5 +28,11 @@ router.get("/", requireAuth, async (req, res) => {
     });
   }
 });
+
+router.get(
+  "/browse",
+  requireAuth,
+  roomController.browseRooms.bind(roomController)
+);
 
 export default router;
