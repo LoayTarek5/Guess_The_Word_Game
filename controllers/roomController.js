@@ -27,7 +27,7 @@ class RoomController {
         expiresAt: { $gt: new Date() },
       };
 
-      const rooms = Room.find(query)
+      const rooms = await Room.find(query)
         .populate("creator", "username avatar")
         .populate("players.user", "username avatar")
         .sort({ createdAt: -1, lastActivity: -1 })
@@ -36,8 +36,11 @@ class RoomController {
         .lean();
 
       const availableRooms = rooms.filter((room) => {
-        room.players.length < room.settings.maxPlayers;
+        const currentPlayers = room.players?.length || 0;
+        const maxPlayers = room.settings?.maxPlayers || 2;
+        return currentPlayers < maxPlayers;
       });
+
       const totalRooms = await Room.countDocuments(query);
 
       const totalPages = Math.ceil(totalRooms / limit);
