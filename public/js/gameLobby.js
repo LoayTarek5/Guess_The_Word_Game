@@ -572,6 +572,7 @@ async function dataRoom() {
     roomName:
       document.querySelector("input[aria-label='room name']").value.trim() ||
       undefined,
+    isPrivate: document.getElementById("isPrivate").checked,
     settings: {
       wordLength: parseInt(document.getElementById("wordLength").value),
       maxPlayers: parseInt(document.getElementById("maxPlayers").value),
@@ -584,7 +585,7 @@ async function dataRoom() {
     },
     createdAt: new Date().toISOString(),
   };
-
+  console.log();
   const validation = validateRoomData(roomDetails);
 
   if (!validation.isValid) {
