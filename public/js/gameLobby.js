@@ -1,3 +1,6 @@
+let currentBrowsePage = 1;
+const roomsPerPage = 10;
+
 // Tab functionality
 function initTabs() {
   const tabButtons = document.querySelectorAll(".tab-button");
@@ -16,8 +19,317 @@ function initTabs() {
 
       // Show corresponding tab pane
       document.getElementById(`${targetTab}-tab`).classList.add("active");
+
+      // Load rooms when browse tab is activated
+      if (targetTab === "browse") {
+        loadRooms(currentPage);
+      }
     });
   });
+}
+
+async function loadRooms(page = 1) {
+  try {
+    const response = await fetch(
+      `/lobby/browse?page=${page}&limit=${roomsPerPage}`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch rooms");
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      currentPage = page;
+      if (data.rooms.length === 0) {
+        displayEmptyState();
+      } else {
+        displayRooms(data.rooms);
+        displayPagination(data.pagination);
+      }
+    }
+  } catch (error) {
+    console.error("Error loading rooms:", error);
+    showNotification("Failed to load rooms. Please try again.", "error");
+    displayEmptyState();
+  }
+}
+
+function displayRooms(rooms) {
+  const roomList = document.querySelector(".room-list");
+  if (!roomList || roomList.length === 0) {
+    displayEmptyState();
+    return;
+  }
+  roomList.innerHTML = rooms
+    .map((room) => {
+      const difficultyClass = `badge-${room.settings.difficulty.toLowerCase()}`;
+      const statusClass = room.isFull ? "status-full" : "status-waiting";
+      const statusText = room.isFull ? "Full" : "Waiting";
+      const joinBtnDisabled = room.isFull ? "disabled" : "";
+      const avatarLetter =
+        room.creator.avatar.length === 1
+          ? room.creator.avatar
+          : room.creator.username.charAt(0).toUpperCase();
+
+      return `
+        <div class="room-item" data-room-id="${room.roomId}">
+          <div class="room-info">
+            <div class="room-avatar">${avatarLetter}</div>
+            <div class="room-details">
+              <div class="room-name">${room.roomName}</div>
+              <div class="room-meta">Hosted by ${room.creator.username} • ${room.timeAgo}</div>
+            </div>
+          </div>
+          <div class="room-badges">
+            <div class="difficulty-badge ${difficultyClass}">${room.settings.difficulty}</div>
+            <div class="room-code">${room.roomCode}</div>
+            <div class="game-stats">
+              <span>${room.settings.wordLength}L</span>
+              <span>${room.settings.maxTries}T</span>
+            </div>
+          </div>
+          <div class="room-actions">
+            <div class="player-count">
+              <i class="fas fa-users"></i>
+              ${room.currentPlayers}/${room.maxPlayers}
+            </div>
+            <div class="status-indicator ${statusClass}">${statusText}</div>
+            <button class="join-btn" data-room-code="${room.roomCode}" ${joinBtnDisabled}>
+              Join Room
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function displayEmptyState() {
+  const roomList = document.querySelector(".room-list");
+  roomList.innerHTML = `
+    <div class="empty-state">
+      <i class="fas fa-inbox" style="font-size: 48px; color: #94a3b8; margin-bottom: 16px;"></i>
+      <p style="color: #64748b; font-size: 16px; margin: 0;">No active rooms available</p>
+      <p style="color: #94a3b8; font-size: 14px; margin-top: 8px;">Create a new room to get started!</p>
+    </div>
+  `;
+}
+
+function displayPagination(pagination) {
+  const browseTab = document.getElementById("browse-tab");
+
+  // Remove existing pagination if any
+  const existingPagination = browseTab.querySelector(".friend-pagination");
+  if (existingPagination) {
+    existingPagination.remove();
+  }
+
+  // Only show pagination if there are rooms and multiple pages
+  if (pagination.totalRooms === 0 || pagination.totalPages <= 1) {
+    return;
+  }
+
+  const paginationHTML = createPaginationHTML(pagination);
+  browseTab.insertAdjacentHTML("beforeend", paginationHTML);
+
+  // Attach pagination event listeners
+  attachPaginationListeners();
+}
+
+// Attach event listeners to pagination buttons
+function attachPaginationListeners() {
+  const paginationButtons = document.querySelectorAll(
+    ".pagination button[data-page]"
+  );
+
+  paginationButtons.forEach((button) => {
+    button.addEventListener("click", (e) => {
+      const page = parseInt(e.currentTarget.dataset.page);
+      if (page && page !== currentPage) {
+        loadRooms(page);
+        // Scroll to top of room list
+        document
+          .querySelector(".room-list")
+          .scrollIntoView({ behavior: "smooth" });
+      }
+    });
+  });
+}
+
+// Attach event listeners to join buttons
+function attachJoinButtonListeners() {
+  document.querySelectorAll(".join-btn").forEach((btn) => {
+    if (!btn.disabled) {
+      btn.addEventListener("click", (e) => {
+        const roomCode = e.target.dataset.roomCode;
+        if (roomCode) {
+          joinRoomByRoomCode(roomCode);
+        }
+      });
+    }
+  });
+}
+
+function createPaginationHTML(pagination) {
+  if (pagination.totalPages <= 1) {
+    return "";
+  }
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalGames,
+    hasPrevPage,
+    hasNextPage,
+  } = pagination;
+
+  // Generate page numbers with ellipsis logic
+  const getPageElements = () => {
+    const elements = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      // Show all pages if total pages <= maxVisible
+      for (let i = 1; i <= totalPages; i++) {
+        elements.push({ type: "page", number: i });
+      }
+    } else {
+      // Always show first page
+      elements.push({ type: "page", number: 1 });
+
+      let start, end;
+
+      if (currentPage <= 3) {
+        // Near beginning: 1 2 3 4 ... last
+        start = 2;
+        end = 4;
+        if (end < totalPages - 1) {
+          elements.push(
+            ...Array.from({ length: end - start + 1 }, (_, i) => ({
+              type: "page",
+              number: start + i,
+            }))
+          );
+          elements.push({ type: "ellipsis", id: "end" });
+        } else {
+          elements.push(
+            ...Array.from({ length: totalPages - 1 }, (_, i) => ({
+              type: "page",
+              number: i + 2,
+            }))
+          );
+        }
+      } else if (currentPage >= totalPages - 2) {
+        // Near end: 1 ... last-3 last-2 last-1 last
+        if (totalPages > 4) {
+          elements.push({ type: "ellipsis", id: "start" });
+          start = totalPages - 3;
+          elements.push(
+            ...Array.from({ length: 3 }, (_, i) => ({
+              type: "page",
+              number: start + i,
+            }))
+          );
+        } else {
+          elements.push(
+            ...Array.from({ length: totalPages - 2 }, (_, i) => ({
+              type: "page",
+              number: i + 2,
+            }))
+          );
+        }
+      } else {
+        // In middle: 1 ... current-1 current current+1 ... last
+        elements.push({ type: "ellipsis", id: "start" });
+        elements.push({ type: "page", number: currentPage - 1 });
+        elements.push({ type: "page", number: currentPage });
+        elements.push({ type: "page", number: currentPage + 1 });
+        elements.push({ type: "ellipsis", id: "end" });
+      }
+
+      // Always show last page (if not already included)
+      const lastElem = elements[elements.length - 1];
+      if (
+        !(
+          lastElem &&
+          lastElem.type === "page" &&
+          lastElem.number === totalPages
+        )
+      ) {
+        elements.push({ type: "page", number: totalPages });
+      }
+    }
+
+    return elements;
+  };
+
+  const pageElements = getPageElements();
+
+  return `
+    <nav class="friend-pagination">
+      <div class="pagination-info">
+        <p>Showing ${startIndex} to ${endIndex} of ${totalGames} Matches</p>
+      </div>
+      <ul class="pagination">
+        <li class="page-item">
+          <button class="page-slide back ${!hasPrevPage ? "disable" : ""}" 
+                  data-page="${currentPage - 1}" 
+                  ${!hasPrevPage ? "disabled" : ""}>
+            <i class="fa-solid fa-chevron-left"></i>
+            <span>Back</span>
+          </button>
+        </li>
+        ${pageElements
+          .map((element) => {
+            if (element.type === "page") {
+              return `
+              <li class="page-item">
+                <button class="page-curr ${
+                  element.number === currentPage ? "active" : ""
+                }" 
+                        data-page="${element.number}">
+                  ${element.number}
+                </button>
+              </li>
+            `;
+            } else {
+              // Ellipsis button: compute target page to jump to
+              const targetPage =
+                element.id === "start"
+                  ? Math.max(2, currentPage - 2)
+                  : Math.min(totalPages - 1, currentPage + 2);
+
+              return `
+              <li class="page-item">
+                <button class="page-ellipsis" data-page="${targetPage}" title="Jump to page ${targetPage}">
+                  <i class="fa-solid fa-ellipsis"></i>
+                </button>
+              </li>
+            `;
+            }
+          })
+          .join("")}
+        <li class="page-item">
+          <button class="page-slide next ${!hasNextPage ? "disable" : ""}" 
+                  data-page="${currentPage + 1}" 
+                  ${!hasNextPage ? "disabled" : ""}>
+            <span>Next</span>
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  `;
 }
 
 // Update difficulty preview
@@ -199,13 +511,16 @@ async function joinRoomByRoomCode(roomCode) {
     const data = await response.json();
 
     if (response.ok) {
-      sessionStorage.setItem('currentRoom', JSON.stringify({
-        roomId: data.roomId,
-        roomCode: roomCode
-      }));
+      sessionStorage.setItem(
+        "currentRoom",
+        JSON.stringify({
+          roomId: data.roomId,
+          roomCode: roomCode,
+        })
+      );
 
       showNotification("Successfully joined the room!", "success");
-      
+
       setTimeout(() => {
         window.location.href = `/room/${data.roomId}`;
       }, 500);
@@ -231,15 +546,21 @@ function setEventListener() {
 
   // Create room button
   document.querySelector(".create-btn").addEventListener("click", dataRoom);
+  document.querySelector(".room-list").addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
 
-  // Join room buttons in browse tab
-  document.querySelectorAll(".join-btn").forEach((btn) => {
-    if (!btn.disabled) {
+    // Only handle pagination buttons
+    if (btn.classList.contains("join-btn")) {
+      e.preventDefault();
+
+      if (btn.disabled) return;
+
       btn.addEventListener("click", (e) => {
         const roomItem = e.target.closest(".room-item");
         const roomCodeElement = roomItem.querySelector(".room-code");
         const roomCode = roomCodeElement.textContent.trim();
-
+        console.log("JOINNNNN");
         joinRoomByRoomCode(roomCode);
       });
     }
@@ -383,6 +704,11 @@ function initializeGameLobby() {
   updateDifficultyPreview();
   initJoinRoom();
   setEventListener();
+  attachJoinButtonListeners();
+  const browseTab = document.querySelector('.tab-button[data-tab="browse"]');
+  if (browseTab && browseTab.classList.contains("active")) {
+    loadRooms(1);
+  }
 }
 
 window.gameLobbyUtils = {
