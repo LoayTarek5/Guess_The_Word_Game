@@ -107,7 +107,7 @@ class RoomController {
   async createRoom(req, res) {
     try {
       const userId = req.user.userId;
-      const { roomName, settings } = req.body;
+      const { roomName, isPrivate, settings } = req.body;
 
       const user = await User.findById(userId);
       if (!user) {
@@ -124,6 +124,7 @@ class RoomController {
         roomCode,
         roomName: roomName || `${user.username}'s Room`,
         creator: userId,
+        isPrivate: isPrivate || false,
         settings: {
           wordLength: settings.wordLength,
           maxPlayers: settings.maxPlayers,
