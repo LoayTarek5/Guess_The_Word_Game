@@ -49,6 +49,10 @@ const gameSchema = new mongoose.Schema({
 
   // Current word info
   currentWord: {
+     wordId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "WordBank" 
+  },
     word: String,
     hint: String,
     category: String,
