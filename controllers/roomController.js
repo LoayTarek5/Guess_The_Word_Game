@@ -14,6 +14,258 @@ import {
 import { emitNotificationToUser } from "../socket/handlers/notificationHandler.js";
 
 class RoomController {
+  async startGame(req, res) {
+    try {
+      const { roomId } = req.params;
+      const userId = req.user.userId;
+
+      logger.info(`Starting game for room: ${roomId}, initiated by: ${userId}`);
+
+      const room = await Room.findOne({ roomId }).populate(
+        "players.user",
+        "username avatar stats"
+      );
+
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          message: "Room not found",
+        });
+      }
+
+      if (!room.isHost(userId)) {
+        return res.status(403).json({
+          success: false,
+          message: "Only the host can start the game",
+        });
+      }
+
+      if (room.status !== "waiting" || room.status !== "full") {
+        return res.status(400).json({
+          success: false,
+          message: "Game already in progress or Closed",
+        });
+      }
+
+      if (room.players.length !== room.settings.maxPlayers) {
+        return res.status(400).json({
+          success: false,
+          message: `Need ${room.settings.maxPlayers} players to start`,
+        });
+      }
+
+      const { wordLength, language, difficulty } = room.settings;
+
+      let selectedWord;
+      try {
+        selectedWord = await WordManager.selectWord(
+          language,
+          wordLength,
+          difficulty
+        );
+      } catch (error) {
+        logger.error("Word selection error:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to select word for game",
+        });
+      }
+
+      if (!selectedWord) {
+        return res.status(500).json({
+          success: false,
+          message: "No words available for selected settings",
+        });
+      }
+
+      const wordId = selectedWord._id;
+
+      const gameId = new mongoose.Types.ObjectId().toString();
+      const game = new Games({
+        gameId,
+        players: room.players.map((player) => ({
+          user: player.user._id,
+          score: 0,
+          wordsGuessed: 0,
+          averageGuessTime: 0,
+          isReady: true,
+          joinedAt: player.joinedAt,
+        })),
+        gameSettings: {
+          maxPlayers: room.settings.maxPlayers,
+          roundsToWin: 3, // Can be configurable
+          timePerRound: 60, // 60 seconds per round
+          difficulty: room.settings.difficulty,
+          category: "general",
+          wordLength: room.settings.wordLength,
+          maxTries: room.settings.maxTries,
+          language: room.settings.language,
+        },
+        status: "active",
+        currentRound: 1,
+        currentTurn: room.players[0].user._id, 
+        currentWord: {
+          wordId: wordId,
+          word: selectedWord.word.toUpperCase(),
+          hint: selectedWord.hint || "",
+          category: selectedWord.category || "general",
+          difficulty: difficulty,
+          attempts: 0,
+        },
+        rounds: [],
+        createdAt: new Date(),
+        startedAt: new Date(),
+      });
+
+      await game.save();
+
+      room.currentGame = game._id;
+      room.status = "in-game";
+      room.lastActivity = new Date();
+      await room.save();
+
+      await room.invalidateInvitations();
+
+      const playerIds = room.players.map((p) => p.user._id);
+      await User.updateMany(
+        { _id: { $in: playerIds } },
+        { status: "in match" }
+      );
+
+      const gameData = {
+        gameId: game.gameId,
+        roomId: room.roomId,
+        roomCode: room.roomCode,
+        status: "active",
+        currentRound: game.currentRound,
+        currentTurn: game.currentTurn.toString(),
+        roundsToWin: game.gameSettings.roundsToWin,
+        timePerRound: game.gameSettings.timePerRound,
+        wordLength: game.gameSettings.wordLength,
+        maxTries: game.gameSettings.maxTries,
+        players: game.players.map((player) => {
+          const roomPlayer = room.players.find(
+            (p) => p.user._id.toString() === player.user.toString()
+          );
+          return {
+            userId: player.user.toString(),
+            username: roomPlayer?.user.username || "Unknown",
+            avatar: roomPlayer?.user.avatar || "/images/user-solid.svg",
+            score: player.score,
+            wordsGuessed: player.wordsGuessed,
+            isReady: player.isReady,
+            isCurrentTurn:
+              player.user.toString() === game.currentTurn.toString(),
+          };
+        }),
+        settings: {
+          wordLength: game.gameSettings.wordLength,
+          maxTries: game.gameSettings.maxTries,
+          difficulty: game.gameSettings.difficulty,
+          language: game.gameSettings.language,
+          roundsToWin: game.gameSettings.roundsToWin,
+          timePerRound: game.gameSettings.timePerRound,
+        },
+        roundStartTime: new Date(),
+      };
+
+      emitGameStarted(room.roomId, gameData);
+
+      logger.info(
+        `Game ${gameId} started successfully for room ${roomId}. Word: ${selectedWord.word}`
+      );
+
+      res.json({
+        success: true,
+        message: "Game started successfully",
+        gameId: game.gameId,
+        gameData,
+      });
+    } catch (error) {
+      logger.error("Start game error:", error);
+      console.error("Start game error details:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to start game",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  async getGameState(req, res) {
+    try {
+      const { gameId } = req.params;
+      const userId = req.user.userId;
+
+      const game = await Game.findOne({ gameId })
+        .populate("players.user", "username avatar")
+        .populate("currentTurn", "username avatar");
+
+      if (!game) {
+        return res.status(404).json({
+          success: false,
+          message: "Game not found",
+        });
+      }
+
+      // Verify user is in game
+      const isPlayer = game.players.some(
+        (p) => p.user._id.toString() === userId
+      );
+
+      if (!isPlayer) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not in this game",
+        });
+      }
+
+      // Prepare game state (hide the actual word)
+      const gameState = {
+        gameId: game.gameId,
+        status: game.status,
+        currentRound: game.currentRound,
+        currentTurn: game.currentTurn,
+        wordLength: game.currentWord.word.length,
+        maxTries: game.gameSettings.maxTries,
+        currentAttempts: game.currentWord.attempts || 0,
+        players: game.players.map((player) => ({
+          userId: player.user._id,
+          username: player.user.username,
+          avatar: player.user.avatar,
+          score: player.score,
+          wordsGuessed: player.wordsGuessed,
+          isCurrentTurn: player.user._id.toString() === game.currentTurn.toString(),
+        })),
+        settings: game.gameSettings,
+        timeRemaining: this.calculateTimeRemaining(game),
+      };
+
+      res.json({
+        success: true,
+        gameState,
+      });
+    } catch (error) {
+      logger.error("Get game state error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get game state",
+      });
+    }
+  }
+
+  calculateTimeRemaining(game) {
+    if (!game.startedAt) return 0;
+    
+    const elapsed = Date.now() - new Date(game.startedAt).getTime();
+    const timeLimit = game.gameSettings.timePerRound * 1000; // Convert to ms
+    const remaining = Math.max(0, timeLimit - elapsed);
+    
+    return Math.floor(remaining / 1000); // Return in seconds
+  }
+
   async browseRooms(req, res) {
     try {
       const userId = req.user.userId;
