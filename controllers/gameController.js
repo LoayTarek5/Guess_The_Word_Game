@@ -195,7 +195,6 @@ class GameController {
         logger.info(
           `Player ${userId} guessed correctly! Score: ${score}, Total: ${currentPlayer.score}`
         );
-
       } else if (isLastAttempt) {
         roundComplete = true;
         roundEndReason = "max_tries";
@@ -260,7 +259,98 @@ class GameController {
     }
   }
 
-  compareWords(guessedWord, targetWord) {}
+  compareWords(guess, target) {
+    const feedback = [];
+    const targetLetters = target.split("");
+    const guessLetters = guess.split("");
+
+    const targetUsed = new Array(target.length).fill(false);
+
+    for (let i = 0; i < guessLetters.length; i++) {
+      if (guessLetters[i] === targetLetters[i]) {
+        feedback[i] = {
+          letter: guessLetters[i],
+          status: "correct", 
+        };
+        targetUsed[i] = true;
+      }
+    }
+
+    for (let i = 0; i < guessLetters.length; i++) {
+      if (feedback[i]) continue; 
+
+      const letter = guessLetters[i];
+      let foundAt = -1;
+
+      for (let j = 0; j < targetLetters.length; j++) {
+        if (!targetUsed[j] && targetLetters[j] === letter) {
+          foundAt = j;
+          break;
+        }
+      }
+
+      if (foundAt !== -1) {
+        feedback[i] = {
+          letter,
+          status: "present", 
+        };
+        targetUsed[foundAt] = true;
+      } else {
+        feedback[i] = {
+          letter,
+          status: "absent", 
+        };
+      }
+    }
+
+    return feedback;
+  }
+
+  calculateScore(attempts, guessTime, settings) {
+    const baseScore = 100;
+    const maxTries = settings.maxTries || 6;
+
+    // Penalty for attempts (fewer attempts = higher score)
+    const attemptBonus = ((maxTries - attempts + 1) / maxTries) * 50;
+
+    // Time bonus (faster = higher score, max 50 points)
+    const timeLimit = settings.timePerRound || 60;
+    const timeBonus = Math.max(0, ((timeLimit - guessTime) / timeLimit) * 50);
+
+    // Difficulty multiplier
+    const difficultyMultipliers = {
+      easy: 1.0,
+      medium: 1.5,
+      hard: 2.0,
+    };
+    const multiplier = difficultyMultipliers[settings.difficulty] || 1.5;
+
+    const totalScore = Math.round(
+      (baseScore + attemptBonus + timeBonus) * multiplier
+    );
+
+    return Math.max(0, totalScore);
+  }
+
+  calculateGuessTime(startTime) {
+    if (!startTime) return 0;
+    const elapsed = Date.now() - new Date(startTime).getTime();
+    return Math.floor(elapsed / 1000);
+  }
+
+  getNextPlayer(game, currentUserId) {
+    const currentIndex = game.players.findIndex(
+      (p) => p.user._id.toString() === currentUserId
+    );
+
+    const nextIndex = (currentIndex + 1) % game.players.length;
+    return game.players[nextIndex];
+  }
+
+  async handleRoundEnd(game, winnerId, reason) {
+    try {
+    } catch (error) {}
+  }
 
   async getMatchHistory(req, res) {
     try {
