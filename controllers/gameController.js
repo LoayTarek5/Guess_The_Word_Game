@@ -270,14 +270,14 @@ class GameController {
       if (guessLetters[i] === targetLetters[i]) {
         feedback[i] = {
           letter: guessLetters[i],
-          status: "correct", 
+          status: "correct",
         };
         targetUsed[i] = true;
       }
     }
 
     for (let i = 0; i < guessLetters.length; i++) {
-      if (feedback[i]) continue; 
+      if (feedback[i]) continue;
 
       const letter = guessLetters[i];
       let foundAt = -1;
@@ -292,13 +292,13 @@ class GameController {
       if (foundAt !== -1) {
         feedback[i] = {
           letter,
-          status: "present", 
+          status: "present",
         };
         targetUsed[foundAt] = true;
       } else {
         feedback[i] = {
           letter,
-          status: "absent", 
+          status: "absent",
         };
       }
     }
@@ -349,7 +349,168 @@ class GameController {
 
   async handleRoundEnd(game, winnerId, reason) {
     try {
-    } catch (error) {}
+      // Save round to history
+      const roundData = {
+        roundNumber: game.currentRound,
+        word: game.currentWord.word,
+        hint: game.currentWord.hint,
+        winner: winnerId || null,
+        guessTime: game.currentWord.guessTime || 0,
+        attempts: game.currentWord.attempts || 0,
+        completedAt: new Date(),
+      };
+
+      game.rounds.push(roundData);
+
+      // Get winner info
+      let winnerInfo = null;
+      if (winnerId) {
+        const winnerPlayer = game.players.find(
+          (p) => p.user._id.toString() === winnerId
+        );
+        if (winnerPlayer) {
+          winnerInfo = {
+            userId: winnerId,
+            username: winnerPlayer.user.username,
+            avatar: winnerPlayer.user.avatar,
+            score: winnerPlayer.score,
+          };
+        }
+      }
+
+      // Check if game should end
+      const roundsToWin = game.gameSettings.roundsToWin || 3;
+      const shouldEndGame = game.currentRound >= roundsToWin;
+
+      if (shouldEndGame) {
+        // Game over - determine overall winner
+        await this.endGame(game);
+
+        return {
+          roundNumber: game.currentRound,
+          word: game.currentWord.word,
+          winner: winnerInfo,
+          reason,
+          gameComplete: true,
+          finalScores: game.players.map((p) => ({
+            userId: p.user._id,
+            username: p.user.username,
+            avatar: p.user.avatar,
+            score: p.score,
+            wordsGuessed: p.wordsGuessed,
+          })),
+          overallWinner: game.winner,
+        };
+      }
+
+      // Start next round
+      game.currentRound += 1;
+
+      // Select new word for next round
+      const newWord = await WordManager.selectWord(
+        game.gameSettings.language,
+        game.gameSettings.wordLength,
+        game.gameSettings.difficulty
+      );
+
+      if (!newWord) {
+        throw new Error("Failed to select word for next round");
+      }
+
+      // Reset current word data
+      game.currentWord = {
+        wordId: newWord._id,
+        word: newWord.word.toUpperCase(),
+        hint: newWord.hint,
+        category: newWord.category,
+        difficulty: game.gameSettings.difficulty,
+        attempts: 0,
+      };
+
+      // Reset turn to first player
+      game.currentTurn = game.players[0].user._id;
+      game.startedAt = new Date();
+
+      await game.save();
+
+      logger.info(
+        `Round ${game.currentRound - 1} ended. Starting round ${
+          game.currentRound
+        }`
+      );
+
+      return {
+        roundNumber: game.currentRound - 1,
+        word: roundData.word,
+        winner: winnerInfo,
+        reason,
+        gameComplete: false,
+        nextRound: {
+          roundNumber: game.currentRound,
+          wordLength: newWord.length,
+          currentTurn: game.currentTurn.toString(),
+          startTime: game.startedAt,
+        },
+      };
+    } catch (error) {
+      logger.error("Handle round end error:", error);
+      throw error;
+    }
+  }
+
+  async endGame(game) {
+    try {
+      // Determine overall winner (highest score)
+      let highestScore = -1;
+      let winnerId = null;
+
+      game.players.forEach((player) => {
+        if (player.score > highestScore) {
+          highestScore = player.score;
+          winnerId = player.user._id;
+        }
+      });
+
+      game.winner = winnerId;
+      game.status = "completed";
+      game.completedAt = new Date();
+
+      // Save final scores
+      game.finalScores = game.players.map((p) => ({
+        user: p.user._id,
+        score: p.score,
+        wordsGuessed: p.wordsGuessed,
+        averageTime: p.averageGuessTime || 0,
+      }));
+
+      await game.save();
+
+      // Update user stats
+      await this.updatePlayerStats(game);
+
+      // Update room status
+      const Room = mongoose.model("Room");
+      await Room.findOneAndUpdate(
+        { currentGame: game._id },
+        { status: "waiting", currentGame: null }
+      );
+
+      // Update word statistics
+      if (game.currentWord.wordId) {
+        const wasGuessed = game.currentWord.guessedBy != null;
+        const guessTime = game.currentWord.guessTime || 0;
+        await WordManager.updateWordStats(
+          game.currentWord.wordId,
+          wasGuessed,
+          guessTime
+        );
+      }
+
+      logger.info(`Game ${game.gameId} completed. Winner: ${winnerId}`);
+    } catch (error) {
+      logger.error("End game error:", error);
+      throw error;
+    }
   }
 
   async getMatchHistory(req, res) {
