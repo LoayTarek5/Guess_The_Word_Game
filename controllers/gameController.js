@@ -1,8 +1,267 @@
 import User from "../models/User.js";
 import Games from "../models/Games.js";
 import logger from "../utils/logger.js";
+import {
+  emitGameStarted,
+  emitGameError,
+  emitGuessResult,
+  emitTurnChange,
+  emitRoundComplete,
+  emitGameOver,
+} from "../socket/handlers/gameHandler.js";
 
 class GameController {
+  async getGameState(req, res) {
+    try {
+      const { gameId } = req.params;
+      const userId = req.user.userId;
+
+      const game = await Game.findOne({ gameId })
+        .populate("players.user", "username avatar")
+        .populate("currentTurn", "username avatar");
+
+      if (!game) {
+        return res.status(404).json({
+          success: false,
+          message: "Game not found",
+        });
+      }
+
+      // Verify user is in game
+      const isPlayer = game.players.some(
+        (p) => p.user._id.toString() === userId
+      );
+
+      if (!isPlayer) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not in this game",
+        });
+      }
+
+      // Prepare game state (hide the actual word)
+      const gameState = {
+        gameId: game.gameId,
+        status: game.status,
+        currentRound: game.currentRound,
+        currentTurn: game.currentTurn,
+        wordLength: game.currentWord.word.length,
+        maxTries: game.gameSettings.maxTries,
+        currentAttempts: game.currentWord.attempts || 0,
+        players: game.players.map((player) => ({
+          userId: player.user._id,
+          username: player.user.username,
+          avatar: player.user.avatar,
+          score: player.score,
+          wordsGuessed: player.wordsGuessed,
+          isCurrentTurn:
+            player.user._id.toString() === game.currentTurn.toString(),
+        })),
+        settings: game.gameSettings,
+        timeRemaining: this.calculateTimeRemaining(game),
+      };
+
+      res.json({
+        success: true,
+        gameState,
+      });
+    } catch (error) {
+      logger.error("Get game state error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get game state",
+      });
+    }
+  }
+
+  calculateTimeRemaining(game) {
+    if (!game.startedAt) return 0;
+
+    const elapsed = Date.now() - new Date(game.startedAt).getTime();
+    const timeLimit = game.gameSettings.timePerRound * 1000; // Convert to ms
+    const remaining = Math.max(0, timeLimit - elapsed);
+
+    return Math.floor(remaining / 1000); // Return in seconds
+  }
+
+  async submitGuess(req, res) {
+    try {
+      const { gameId } = req.params;
+      const { guess } = req.body;
+      const userId = req.user.userId;
+
+      logger.info(
+        `User ${userId} submitting guess: ${guess} for game: ${gameId}`
+      );
+
+      const game = Games.findOne({ gameId })
+        .populate("players.user", "username avatar")
+        .populate("currentTurn", "username");
+
+      if (!game) {
+        return res.status(404).json({
+          success: false,
+          message: "Game not found",
+        });
+      }
+
+      if (game.status !== "active") {
+        return res.status(400).json({
+          success: false,
+          message: "Game is not active",
+        });
+      }
+
+      const player = game.players.find((player) => {
+        player.user._id.toString() === userId;
+      });
+
+      if (!player) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not in this game",
+        });
+      }
+
+      if (game.currentTurn.toString() !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: "Not your turn",
+        });
+      }
+
+      if (!guess || typeof guess !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid guess",
+        });
+      }
+
+      const guessedWord = guess.toUpperCase().trim();
+      const expectedLength = game.currentWord.word.length;
+      if (guessedWord.length !== expectedLength) {
+        return res.status(400).json({
+          success: false,
+          message: `Guess must be ${expectedLength} letters`,
+        });
+      }
+
+      const language = game.gameSettings.language || "en";
+      const validation = await WordManager.validateGuess(
+        guessedWord,
+        expectedLength,
+        language
+      );
+
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: validation.error || "Not a valid word",
+        });
+      }
+
+      const targetWord = game.currentWord.word;
+      const feedbackGrids = this.compareWords(guessedWord, targetWord);
+
+      game.currentWord.attempts = (game.currentWord.attempts || 0) + 1;
+      const currentAttempts = game.currentWord.attempts;
+
+      const isCorrect = normalizedGuess === targetWord;
+      const maxTries = game.gameSettings.maxTries;
+      const isLastAttempt = currentAttempts >= maxTries;
+
+      let roundComplete = false;
+      let winner = null;
+      let roundEndReason = null;
+
+      if (isCorrect) {
+        roundComplete = true;
+        winner = userId;
+        roundEndReason = "correct_guess";
+
+        const guessTime = this.calculateGuessTime(game.startedAt);
+        const score = this.calculateScore(
+          currentAttempts,
+          guessTime,
+          game.gameSettings
+        );
+
+        currentPlayer.score += score;
+        currentPlayer.wordsGuessed += 1;
+
+        game.currentWord.guessedBy = userId;
+        game.currentWord.guessTime = guessTime;
+
+        logger.info(
+          `Player ${userId} guessed correctly! Score: ${score}, Total: ${currentPlayer.score}`
+        );
+
+      } else if (isLastAttempt) {
+        roundComplete = true;
+        roundEndReason = "max_tries";
+
+        logger.info(`Round ended: Max tries reached for game ${gameId}`);
+      }
+
+      await game.save();
+
+      const guessResult = {
+        guess: normalizedGuess,
+        feedbackGrids,
+        isCorrect,
+        attempts: currentAttempts,
+        maxTries,
+        userId,
+        username: currentPlayer.user.username,
+      };
+
+      emitGuessResult(game.roomId || gameId, guessResult);
+
+      if (roundComplete) {
+        const roundResult = await this.handleRoundEnd(
+          game,
+          winner,
+          roundEndReason
+        );
+
+        emitRoundComplete(game.roomId || gameId, roundResult);
+
+        return res.json({
+          success: true,
+          guessResult,
+          roundComplete: true,
+          roundResult,
+        });
+      }
+
+      const nextPlayer = this.getNextPlayer(game, userId);
+      game.currentTurn = nextPlayer.user._id;
+      await game.save();
+
+      emitTurnChange(game.roomId || gameId, {
+        currentTurn: nextPlayer.user._id.toString(),
+        username: nextPlayer.user.username,
+      });
+
+      logger.info(`Turn changed to: ${nextPlayer.user.username}`);
+
+      res.json({
+        success: true,
+        guessResult,
+        roundComplete: false,
+        nextTurn: nextPlayer.user._id.toString(),
+      });
+    } catch (error) {
+      logger.error("Submit guess error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to submit guess",
+      });
+    }
+  }
+
+  compareWords(guessedWord, targetWord) {}
+
   async getMatchHistory(req, res) {
     try {
       const userId = req.user.userId;
