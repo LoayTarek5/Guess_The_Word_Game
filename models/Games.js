@@ -14,6 +14,7 @@ const gameSchema = new mongoose.Schema({
         required: true,
       },
       score: { type: Number, default: 0 },
+      attempts: Number,
       wordsGuessed: { type: Number, default: 0 },
       averageGuessTime: { type: Number, default: 0 },
       isReady: { type: Boolean, default: false },
@@ -32,9 +33,14 @@ const gameSchema = new mongoose.Schema({
       default: "medium",
     },
     category: { type: String, default: "general" },
+    language: {
+      type: String,
+      enum: ["en", "ar", "zh", "de", "es", "fr"],
+      default: "en",
+      required: true,
+    },
   },
 
-  // Game State
   status: {
     type: String,
     enum: ["waiting", "active", "paused", "completed", "abandoned"],
@@ -47,13 +53,18 @@ const gameSchema = new mongoose.Schema({
     ref: "User",
   },
 
-  // Current word info
   currentWord: {
-     wordId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "WordBank" 
-  },
+    wordId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WordBank",
+    },
     word: String,
+    language: {
+      type: String,
+      enum: ["en", "ar", "zh", "de", "es", "fr"],
+      default: "en",
+      required: true,
+    },
     hint: String,
     category: String,
     difficulty: String,
