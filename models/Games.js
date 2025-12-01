@@ -6,6 +6,12 @@ const gameSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+
+  roomId: {
+    type: String,
+    required: false,
+  },
+
   players: [
     {
       user: {
@@ -33,6 +39,8 @@ const gameSchema = new mongoose.Schema({
       default: "medium",
     },
     category: { type: String, default: "general" },
+    wordLength: { type: Number, required: true }, // Add if missing
+    maxTries: { type: Number, required: true },
     language: {
       type: String,
       enum: ["en", "ar", "zh", "de", "es", "fr"],
