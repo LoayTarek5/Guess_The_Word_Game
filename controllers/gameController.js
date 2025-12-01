@@ -1,14 +1,14 @@
 import User from "../models/User.js";
 import Games from "../models/Games.js";
 import logger from "../utils/logger.js";
-import {
-  emitGameStarted,
-  emitGameError,
-  emitGuessResult,
-  emitTurnChange,
-  emitRoundComplete,
-  emitGameOver,
-} from "../socket/handlers/gameHandler.js";
+// import {
+//   emitGameStarted,
+//   emitGameError,
+//   emitGuessResult,
+//   emitTurnChange,
+//   emitRoundComplete,
+//   emitGameOver,
+// } from "../socket/handlers/gameHandler.js";
 
 class GameController {
   async getGameState(req, res) {
@@ -510,6 +510,57 @@ class GameController {
     } catch (error) {
       logger.error("End game error:", error);
       throw error;
+    }
+  }
+
+  async updatePlayerStats(game) {
+    try {
+      const User = mongoose.model("User");
+
+      for (const player of game.players) {
+        const isWinner = player.user._id.toString() === game.winner?.toString();
+        const isDraw = !game.winner;
+
+        const updates = {
+          $inc: {
+            "stats.totalGames": 1,
+            "stats.gamesWon": isWinner ? 1 : 0,
+            "stats.gamesLost": !isWinner && !isDraw ? 1 : 0,
+            "stats.gamesDraw": isDraw ? 1 : 0,
+            "stats.totalWordsGuessed": player.wordsGuessed || 0,
+          },
+          status: "online",
+          currentRoomId: null,
+        };
+
+        // Update win streak
+        if (isWinner) {
+          await User.findByIdAndUpdate(player.user._id, {
+            ...updates,
+            $inc: {
+              ...updates.$inc,
+              "stats.winStreak": 1,
+            },
+          });
+
+          // Check and update best streak
+          const user = await User.findById(player.user._id);
+          if (user && user.stats.winStreak > user.stats.bestStreak) {
+            user.stats.bestStreak = user.stats.winStreak;
+            await user.save();
+          }
+        } else {
+          // Reset win streak on loss
+          await User.findByIdAndUpdate(player.user._id, {
+            ...updates,
+            "stats.winStreak": 0,
+          });
+        }
+      }
+
+      logger.info(`Updated stats for ${game.players.length} players`);
+    } catch (error) {
+      logger.error("Update player stats error:", error);
     }
   }
 
