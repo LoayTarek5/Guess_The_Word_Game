@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { authenticateSocket } from "./socketAuth.js";
 import { setupRoomHandlers } from "./handlers/roomHandler.js";
+import { setupGameHandlers } from "./handlers/gameHandler.js";
 import {
   setupUserStatusHandlers,
   broadcastUserStatus,
@@ -38,6 +39,7 @@ export const initializeSocket = async (server) => {
     setupUserStatusHandlers(socket);
     setupNotificationHandlers(socket);
     setupChatHandlers(socket);
+    setupGameHandlers(socket);
 
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
