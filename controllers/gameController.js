@@ -1,14 +1,14 @@
 import User from "../models/User.js";
 import Games from "../models/Games.js";
 import logger from "../utils/logger.js";
-// import {
-//   emitGameStarted,
-//   emitGameError,
-//   emitGuessResult,
-//   emitTurnChange,
-//   emitRoundComplete,
-//   emitGameOver,
-// } from "../socket/handlers/gameHandler.js";
+import {
+  emitGameStarted,
+  emitGameError,
+  emitGuessResult,
+  emitTurnChange,
+  emitRoundComplete,
+  emitGameOver,
+} from "../socket/handlers/gameHandler.js";
 
 class GameController {
   async getGameState(req, res) {
