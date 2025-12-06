@@ -1,0 +1,269 @@
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Render All Elements Normally -->
+  <link rel="stylesheet" href="/style/normalize.css" />
+  <!-- Font Awesome Library -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  />
+
+  <!-- Main Template CSS File -->
+  <link rel="stylesheet" href="/style/framwork.css" />
+  <link rel="stylesheet" href="/style/gameplay.css" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Guess Word Game</title>
+</head>
+
+<div class="game-container">
+  <!-- Game Header -->
+  <div class="game-header">
+    <a href="/lobby" class="back-link">
+      <i class="fas fa-arrow-left"></i>
+      <span>Exit The Game</span>
+    </a>
+    <div class="connection-status">
+      <span class="status-indicator connected"></span>
+      <span>Connected</span>
+    </div>
+    <div class="game-info">
+      <span class="round-info">
+        <i class="fas fa-trophy"></i>
+        Round <span id="current-round">1</span>/<span id="total-rounds">3</span>
+      </span>
+      <span class="time-limit">
+        <i class="fas fa-clock"></i>
+        <span id="time-limit">5L</span>
+      </span>
+      <span class="guess-time">
+        <i class="fas fa-hourglass-half"></i>
+        <span id="guess-time">6T</span>
+      </span>
+      <span class="turn-indicator">
+        <i class="far fa-clock"></i>
+        <span id="turn-text">Your turn</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Game Content -->
+  <div class="game-content">
+    <!-- Players Section -->
+    <div class="players-section">
+      <!-- Player 1 (You) -->
+      <div class="player-card active-player">
+        <div class="player-header">
+          <div class="player-info">
+            <div class="player-avatar"></div>
+            <div class="player-details">
+              <h3 class="player-name">You</h3>
+              <p class="player-stats">
+                Score: <span id="your-score">0</span> • Tries:
+                <span id="your-tries">0</span>/6
+              </p>
+            </div>
+          </div>
+          <span class="active-badge">Active</span>
+        </div>
+        <div class="guess-grid" id="your-grid">
+          <!-- Row 1 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 2 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 3 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 4 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 5 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 6 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player 2 (Opponent) -->
+      <div class="player-card">
+        <div class="player-header">
+          <div class="player-info">
+            <div class="player-avatar"></div>
+            <div class="player-details">
+              <h3 class="player-name">Alex</h3>
+              <p class="player-stats">
+                Score: <span id="opponent-score">0</span> • Tries:
+                <span id="opponent-tries">0</span>/6
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="guess-grid" id="opponent-grid">
+          <!-- Row 1 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 2 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 3 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 4 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 5 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+          <!-- Row 6 -->
+          <div class="guess-row">
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+            <div class="letter-box"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- row and columns depend on length of the word and maxtries and can be up to 4 player -->
+
+      <div class="input-section">
+        <input
+          type="text"
+          id="guess-input"
+          placeholder="Enter your 5-letter guess"
+          maxlength="5"
+          class="guess-input"
+        />
+        <button class="submit-btn" id="submit-guess-btn">
+          Submit Guess (<span id="guess-count">1</span>/6)
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Section -->
+    <div class="chat-section">
+      <div class="chat-header">
+        <i class="fas fa-comments"></i>
+        <h3 class="chat-title">Gameplay Chat</h3>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-message">
+          <div class="message-sender">
+            Alex
+            <span class="message-time">03:11 PM</span>
+          </div>
+          <div class="message-text">Hey! Ready for some word games?</div>
+        </div>
+
+        <div class="chat-message own">
+          <div class="message-sender">
+            You
+            <span class="message-time">09:51 AM</span>
+          </div>
+          <div class="message-text own-message">hey there</div>
+        </div>
+      </div>
+
+      <div class="chat-input-container">
+        <textarea
+          class="chat-input"
+          id="chatInput"
+          rows="2"
+          placeholder="Type a message..."
+        ></textarea>
+        <button class="chat-send-btn" id="sendBtn">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+<script src="/js/gameplay.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Connect socket if not connected
+    if (window.socketManager && !window.socketManager.connected) {
+      window.socketManager.connect();
+    }
+
+    // Initialize common utilities
+    if (window.mainUtils) {
+      window.mainUtils.initializeCommon();
+    }
+
+    // Initialize game
+    if (window.gameUtils) {
+      window.gameUtils.initializeGame();
+    }
+  });
+</script>
