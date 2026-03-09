@@ -255,10 +255,12 @@
     if (window.socketManager && !window.socketManager.connected) {
       window.socketManager.connect();
     }
-
+    
     // Initialize common utilities
     if (window.mainUtils) {
-      window.mainUtils.initializeCommon();
+      window.mainUtils.checkAuthentication();
+      window.mainUtils.startPeriodicAuthCheck();
+      window.mainUtils.startHeartbeat();
     }
 
     // Initialize game
