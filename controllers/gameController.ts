@@ -1,22 +1,40 @@
+import type { Request, Response } from "express";
 import User from "../models/User.js";
 import Games from "../models/Games.js";
+import Room from "../models/Room.js";
 import logger from "../utils/logger.js";
+import WordManager from "../utils/wordManager.js";
 import {
-  emitGameStarted,
-  emitGameError,
   emitGuessResult,
   emitTurnChange,
   emitRoundComplete,
   emitGameOver,
 } from "../socket/handlers/gameHandler.js";
+import type {
+  LetterFeedback,
+  GuessResultPayload,
+  RoundCompletePayload,
+  RoundEndReason,
+} from "../types/game.js";
+
+/** Result of processing a single guess, shared by the REST and socket paths. */
+export type ProcessGuessResult =
+  | { ok: false; status: number; message: string }
+  | {
+      ok: true;
+      guessResult: GuessResultPayload;
+      roundComplete: boolean;
+      roundResult?: RoundCompletePayload;
+      nextTurn?: string;
+    };
 
 class GameController {
-  async getGameState(req, res) {
+  async getGameState(req: Request, res: Response) {
     try {
       const { gameId } = req.params;
-      const userId = req.user.userId;
+      const userId = (req as any).user.userId;
 
-      const game = await Game.findOne({ gameId })
+      const game: any = await Games.findOne({ gameId })
         .populate("players.user", "username avatar")
         .populate("currentTurn", "username avatar");
 
@@ -29,7 +47,7 @@ class GameController {
 
       // Verify user is in game
       const isPlayer = game.players.some(
-        (p) => p.user._id.toString() === userId
+        (p: any) => p.user._id.toString() === userId
       );
 
       if (!isPlayer) {
@@ -48,14 +66,14 @@ class GameController {
         wordLength: game.currentWord.word.length,
         maxTries: game.gameSettings.maxTries,
         currentAttempts: game.currentWord.attempts || 0,
-        players: game.players.map((player) => ({
+        players: game.players.map((player: any) => ({
           userId: player.user._id,
           username: player.user.username,
           avatar: player.user.avatar,
           score: player.score,
           wordsGuessed: player.wordsGuessed,
           isCurrentTurn:
-            player.user._id.toString() === game.currentTurn.toString(),
+            player.user._id.toString() === game.currentTurn._id.toString(),
         })),
         settings: game.gameSettings,
         timeRemaining: this.calculateTimeRemaining(game),
@@ -74,7 +92,7 @@ class GameController {
     }
   }
 
-  calculateTimeRemaining(game) {
+  calculateTimeRemaining(game: any): number {
     if (!game.startedAt) return 0;
 
     const elapsed = Date.now() - new Date(game.startedAt).getTime();
@@ -84,172 +102,186 @@ class GameController {
     return Math.floor(remaining / 1000); // Return in seconds
   }
 
-  async submitGuess(req, res) {
-    try {
-      const { gameId } = req.params;
-      const { guess } = req.body;
-      const userId = req.user.userId;
+  /**
+   * Core guess pipeline: validate, score, persist, and broadcast over the
+   * game room. Used by both the REST route and the socket handler so there
+   * is a single source of truth for guess handling.
+   */
+  async processGuess(
+    gameId: string,
+    userId: string,
+    guess: string
+  ): Promise<ProcessGuessResult> {
+    logger.info(`User ${userId} submitting guess: ${guess} for game: ${gameId}`);
+
+    const game: any = await Games.findOne({ gameId }).populate(
+      "players.user",
+      "username avatar"
+    );
+
+    if (!game) {
+      return { ok: false, status: 404, message: "Game not found" };
+    }
+
+    if (game.status !== "active") {
+      return { ok: false, status: 400, message: "Game is not active" };
+    }
+
+    const player = game.players.find(
+      (p: any) => p.user._id.toString() === userId
+    );
+
+    if (!player) {
+      return { ok: false, status: 403, message: "You are not in this game" };
+    }
+
+    if (game.currentTurn.toString() !== userId) {
+      return { ok: false, status: 403, message: "Not your turn" };
+    }
+
+    if (!guess || typeof guess !== "string") {
+      return { ok: false, status: 400, message: "Invalid guess" };
+    }
+
+    const guessedWord = guess.toUpperCase().trim();
+    const expectedLength = game.currentWord.word.length;
+    if (guessedWord.length !== expectedLength) {
+      return {
+        ok: false,
+        status: 400,
+        message: `Guess must be ${expectedLength} letters`,
+      };
+    }
+
+    const language = game.gameSettings.language || "en";
+    const validation = await WordManager.validateGuess(
+      guessedWord,
+      expectedLength,
+      language
+    );
+
+    if (!validation.valid) {
+      return {
+        ok: false,
+        status: 400,
+        message: validation.error || "Not a valid word",
+      };
+    }
+
+    const targetWord = game.currentWord.word;
+    const feedback = this.compareWords(guessedWord, targetWord);
+
+    game.currentWord.attempts = (game.currentWord.attempts || 0) + 1;
+    const currentAttempts = game.currentWord.attempts;
+    player.attempts = (player.attempts || 0) + 1;
+
+    const isCorrect = guessedWord === targetWord;
+    const maxTries = game.gameSettings.maxTries;
+    const isLastAttempt = currentAttempts >= maxTries;
+
+    let roundComplete = false;
+    let winner: string | null = null;
+    let roundEndReason: RoundEndReason | null = null;
+
+    if (isCorrect) {
+      roundComplete = true;
+      winner = userId;
+      roundEndReason = "correct_guess";
+
+      const guessTime = this.calculateGuessTime(game.startedAt);
+      const score = this.calculateScore(
+        currentAttempts,
+        guessTime,
+        game.gameSettings
+      );
+
+      player.score += score;
+      player.wordsGuessed += 1;
+
+      game.currentWord.guessedBy = userId;
+      game.currentWord.guessTime = guessTime;
 
       logger.info(
-        `User ${userId} submitting guess: ${guess} for game: ${gameId}`
+        `Player ${userId} guessed correctly! Score: ${score}, Total: ${player.score}`
+      );
+    } else if (isLastAttempt) {
+      roundComplete = true;
+      roundEndReason = "max_tries";
+
+      logger.info(`Round ended: Max tries reached for game ${gameId}`);
+    }
+
+    await game.save();
+
+    const guessResult: GuessResultPayload = {
+      guess: guessedWord,
+      feedback,
+      isCorrect,
+      attempts: currentAttempts,
+      maxTries,
+      userId,
+      username: player.user.username,
+    };
+
+    const gameRoomKey = game.gameId;
+    emitGuessResult(gameRoomKey, guessResult);
+
+    if (roundComplete) {
+      const roundResult = await this.handleRoundEnd(
+        game,
+        winner,
+        roundEndReason
       );
 
-      const game = Games.findOne({ gameId })
-        .populate("players.user", "username avatar")
-        .populate("currentTurn", "username");
+      emitRoundComplete(gameRoomKey, roundResult);
 
-      if (!game) {
-        return res.status(404).json({
-          success: false,
-          message: "Game not found",
+      if (roundResult.gameComplete) {
+        emitGameOver(gameRoomKey, {
+          gameId: game.gameId,
+          winner: roundResult.winner,
+          finalScores: roundResult.finalScores || [],
+          reason: roundResult.reason,
         });
       }
 
-      if (game.status !== "active") {
-        return res.status(400).json({
-          success: false,
-          message: "Game is not active",
-        });
+      return { ok: true, guessResult, roundComplete: true, roundResult };
+    }
+
+    const nextPlayer = this.getNextPlayer(game, userId);
+    game.currentTurn = nextPlayer.user._id;
+    await game.save();
+
+    const nextTurnId = nextPlayer.user._id.toString();
+    emitTurnChange(gameRoomKey, {
+      currentTurn: nextTurnId,
+      username: nextPlayer.user.username,
+    });
+
+    logger.info(`Turn changed to: ${nextPlayer.user.username}`);
+
+    return {
+      ok: true,
+      guessResult,
+      roundComplete: false,
+      nextTurn: nextTurnId,
+    };
+  }
+
+  async submitGuess(req: Request, res: Response) {
+    try {
+      const gameId = req.params.gameId as string;
+      const { guess } = req.body;
+      const userId = (req as any).user.userId;
+
+      const result = await this.processGuess(gameId, userId, guess);
+
+      if (!result.ok) {
+        return res
+          .status(result.status)
+          .json({ success: false, message: result.message });
       }
 
-      const player = game.players.find((player) => {
-        player.user._id.toString() === userId;
-      });
-
-      if (!player) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not in this game",
-        });
-      }
-
-      if (game.currentTurn.toString() !== userId) {
-        return res.status(403).json({
-          success: false,
-          message: "Not your turn",
-        });
-      }
-
-      if (!guess || typeof guess !== "string") {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid guess",
-        });
-      }
-
-      const guessedWord = guess.toUpperCase().trim();
-      const expectedLength = game.currentWord.word.length;
-      if (guessedWord.length !== expectedLength) {
-        return res.status(400).json({
-          success: false,
-          message: `Guess must be ${expectedLength} letters`,
-        });
-      }
-
-      const language = game.gameSettings.language || "en";
-      const validation = await WordManager.validateGuess(
-        guessedWord,
-        expectedLength,
-        language
-      );
-
-      if (!validation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: validation.error || "Not a valid word",
-        });
-      }
-
-      const targetWord = game.currentWord.word;
-      const feedbackGrids = this.compareWords(guessedWord, targetWord);
-
-      game.currentWord.attempts = (game.currentWord.attempts || 0) + 1;
-      const currentAttempts = game.currentWord.attempts;
-
-      const isCorrect = normalizedGuess === targetWord;
-      const maxTries = game.gameSettings.maxTries;
-      const isLastAttempt = currentAttempts >= maxTries;
-
-      let roundComplete = false;
-      let winner = null;
-      let roundEndReason = null;
-
-      if (isCorrect) {
-        roundComplete = true;
-        winner = userId;
-        roundEndReason = "correct_guess";
-
-        const guessTime = this.calculateGuessTime(game.startedAt);
-        const score = this.calculateScore(
-          currentAttempts,
-          guessTime,
-          game.gameSettings
-        );
-
-        currentPlayer.score += score;
-        currentPlayer.wordsGuessed += 1;
-
-        game.currentWord.guessedBy = userId;
-        game.currentWord.guessTime = guessTime;
-
-        logger.info(
-          `Player ${userId} guessed correctly! Score: ${score}, Total: ${currentPlayer.score}`
-        );
-      } else if (isLastAttempt) {
-        roundComplete = true;
-        roundEndReason = "max_tries";
-
-        logger.info(`Round ended: Max tries reached for game ${gameId}`);
-      }
-
-      await game.save();
-
-      const guessResult = {
-        guess: normalizedGuess,
-        feedbackGrids,
-        isCorrect,
-        attempts: currentAttempts,
-        maxTries,
-        userId,
-        username: currentPlayer.user.username,
-      };
-
-      emitGuessResult(game.roomId || gameId, guessResult);
-
-      if (roundComplete) {
-        const roundResult = await this.handleRoundEnd(
-          game,
-          winner,
-          roundEndReason
-        );
-
-        emitRoundComplete(game.roomId || gameId, roundResult);
-
-        return res.json({
-          success: true,
-          guessResult,
-          roundComplete: true,
-          roundResult,
-        });
-      }
-
-      const nextPlayer = this.getNextPlayer(game, userId);
-      game.currentTurn = nextPlayer.user._id;
-      await game.save();
-
-      emitTurnChange(game.roomId || gameId, {
-        currentTurn: nextPlayer.user._id.toString(),
-        username: nextPlayer.user.username,
-      });
-
-      logger.info(`Turn changed to: ${nextPlayer.user.username}`);
-
-      res.json({
-        success: true,
-        guessResult,
-        roundComplete: false,
-        nextTurn: nextPlayer.user._id.toString(),
-      });
+      res.json({ success: true, ...result });
     } catch (error) {
       logger.error("Submit guess error:", error);
       res.status(500).json({
@@ -259,8 +291,8 @@ class GameController {
     }
   }
 
-  compareWords(guess, target) {
-    const feedback = [];
+  compareWords(guess: string, target: string): LetterFeedback[] {
+    const feedback: LetterFeedback[] = [];
     const targetLetters = target.split("");
     const guessLetters = guess.split("");
 
@@ -306,7 +338,7 @@ class GameController {
     return feedback;
   }
 
-  calculateScore(attempts, guessTime, settings) {
+  calculateScore(attempts: number, guessTime: number, settings: any): number {
     const baseScore = 100;
     const maxTries = settings.maxTries || 6;
 
@@ -318,7 +350,7 @@ class GameController {
     const timeBonus = Math.max(0, ((timeLimit - guessTime) / timeLimit) * 50);
 
     // Difficulty multiplier
-    const difficultyMultipliers = {
+    const difficultyMultipliers: Record<string, number> = {
       easy: 1.0,
       medium: 1.5,
       hard: 2.0,
@@ -332,22 +364,26 @@ class GameController {
     return Math.max(0, totalScore);
   }
 
-  calculateGuessTime(startTime) {
+  calculateGuessTime(startTime: Date | string | null): number {
     if (!startTime) return 0;
     const elapsed = Date.now() - new Date(startTime).getTime();
     return Math.floor(elapsed / 1000);
   }
 
-  getNextPlayer(game, currentUserId) {
+  getNextPlayer(game: any, currentUserId: string): any {
     const currentIndex = game.players.findIndex(
-      (p) => p.user._id.toString() === currentUserId
+      (p: any) => p.user._id.toString() === currentUserId
     );
 
     const nextIndex = (currentIndex + 1) % game.players.length;
     return game.players[nextIndex];
   }
 
-  async handleRoundEnd(game, winnerId, reason) {
+  async handleRoundEnd(
+    game: any,
+    winnerId: string | null,
+    reason: RoundEndReason | null
+  ): Promise<RoundCompletePayload> {
     try {
       // Save round to history
       const roundData = {
@@ -366,7 +402,7 @@ class GameController {
       let winnerInfo = null;
       if (winnerId) {
         const winnerPlayer = game.players.find(
-          (p) => p.user._id.toString() === winnerId
+          (p: any) => p.user._id.toString() === winnerId
         );
         if (winnerPlayer) {
           winnerInfo = {
@@ -392,14 +428,14 @@ class GameController {
           winner: winnerInfo,
           reason,
           gameComplete: true,
-          finalScores: game.players.map((p) => ({
-            userId: p.user._id,
+          finalScores: game.players.map((p: any) => ({
+            userId: p.user._id.toString(),
             username: p.user.username,
             avatar: p.user.avatar,
             score: p.score,
             wordsGuessed: p.wordsGuessed,
           })),
-          overallWinner: game.winner,
+          overallWinner: game.winner ? game.winner.toString() : null,
         };
       }
 
@@ -421,6 +457,7 @@ class GameController {
       game.currentWord = {
         wordId: newWord._id,
         word: newWord.word.toUpperCase(),
+        language: game.gameSettings.language,
         hint: newWord.hint,
         category: newWord.category,
         difficulty: game.gameSettings.difficulty,
@@ -458,13 +495,13 @@ class GameController {
     }
   }
 
-  async endGame(game) {
+  async endGame(game: any): Promise<void> {
     try {
       // Determine overall winner (highest score)
       let highestScore = -1;
-      let winnerId = null;
+      let winnerId: any = null;
 
-      game.players.forEach((player) => {
+      game.players.forEach((player: any) => {
         if (player.score > highestScore) {
           highestScore = player.score;
           winnerId = player.user._id;
@@ -476,7 +513,7 @@ class GameController {
       game.completedAt = new Date();
 
       // Save final scores
-      game.finalScores = game.players.map((p) => ({
+      game.finalScores = game.players.map((p: any) => ({
         user: p.user._id,
         score: p.score,
         wordsGuessed: p.wordsGuessed,
@@ -489,7 +526,6 @@ class GameController {
       await this.updatePlayerStats(game);
 
       // Update room status
-      const Room = mongoose.model("Room");
       await Room.findOneAndUpdate(
         { currentGame: game._id },
         { status: "waiting", currentGame: null }
@@ -513,15 +549,13 @@ class GameController {
     }
   }
 
-  async updatePlayerStats(game) {
+  async updatePlayerStats(game: any): Promise<void> {
     try {
-      const User = mongoose.model("User");
-
       for (const player of game.players) {
         const isWinner = player.user._id.toString() === game.winner?.toString();
         const isDraw = !game.winner;
 
-        const updates = {
+        const updates: any = {
           $inc: {
             "stats.totalGames": 1,
             "stats.gamesWon": isWinner ? 1 : 0,
@@ -544,7 +578,7 @@ class GameController {
           });
 
           // Check and update best streak
-          const user = await User.findById(player.user._id);
+          const user: any = await User.findById(player.user._id);
           if (user && user.stats.winStreak > user.stats.bestStreak) {
             user.stats.bestStreak = user.stats.winStreak;
             await user.save();
@@ -564,16 +598,16 @@ class GameController {
     }
   }
 
-  async getMatchHistory(req, res) {
+  async getMatchHistory(req: Request, res: Response) {
     try {
-      const userId = req.user.userId;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const userId = (req as any).user.userId;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
       const skip = (page - 1) * limit;
 
       // Get filter parameters
-      const search = req.query.search || "";
-      const resultFilter = req.query.result || "all";
+      const search = (req.query.search as string) || "";
+      const resultFilter = (req.query.result as string) || "all";
 
       console.log(
         `Fetching match history for user: ${userId}, search: "${search}", result: "${resultFilter}"`
@@ -586,7 +620,7 @@ class GameController {
       };
 
       // Get all games first (we'll filter after populating for complex filters)
-      let games = await Games.find(query)
+      let games: any[] = await Games.find(query)
         .populate("players.user", "avatar username stats")
         .populate("winner", "avatar username")
         .sort({ completedAt: -1 });
@@ -595,22 +629,22 @@ class GameController {
 
       // Filter valid games and transform to match history format
       const allMatches = games
-        .filter((game) => {
+        .filter((game: any) => {
           const hasPlayers =
             game.players &&
             game.players.length >= 2 &&
-            game.players.every((player) => player.user && player.user._id);
+            game.players.every((player: any) => player.user && player.user._id);
           if (!hasPlayers) {
             console.warn(`Game ${game._id} has missing player data, skipping`);
           }
           return hasPlayers;
         })
-        .map((match) => {
+        .map((match: any) => {
           const currUser = match.players.find(
-            (player) => player.user._id.toString() === userId
+            (player: any) => player.user._id.toString() === userId
           );
           const opponent = match.players.find(
-            (player) => player.user._id.toString() !== userId
+            (player: any) => player.user._id.toString() !== userId
           );
 
           if (!currUser || !opponent) {
@@ -677,7 +711,7 @@ class GameController {
             gameSettings: match.gameSettings,
           };
         })
-        .filter(Boolean);
+        .filter(Boolean) as any[];
 
       // Apply filters
       let filteredMatches = allMatches;
@@ -685,7 +719,7 @@ class GameController {
       // Apply search filter (opponent username or word)
       if (search && search.trim()) {
         const searchLower = search.toLowerCase().trim();
-        filteredMatches = filteredMatches.filter((match) => {
+        filteredMatches = filteredMatches.filter((match: any) => {
           const opponentMatch = match.opponentUsername
             .toLowerCase()
             .includes(searchLower);
@@ -696,7 +730,7 @@ class GameController {
 
       // Apply result filter
       if (resultFilter && resultFilter !== "all") {
-        filteredMatches = filteredMatches.filter((match) => {
+        filteredMatches = filteredMatches.filter((match: any) => {
           return match.result.status === resultFilter;
         });
       }
@@ -731,7 +765,7 @@ class GameController {
           result: resultFilter,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Get match history error details:", error);
       logger.error("Get match history error:", error);
       res.status(500).json({
@@ -743,10 +777,10 @@ class GameController {
     }
   }
 
-  async getPerformanceData(req, res) {
+  async getPerformanceData(req: Request, res: Response) {
     try {
-      const userId = req.user.userId;
-      const { months = 6 } = req.query; // Default to 6 months
+      const userId = (req as any).user.userId;
+      const months = parseInt(req.query.months as string) || 6; // Default to 6 months
 
       // Calculate date range
       const endDate = new Date();
@@ -754,7 +788,7 @@ class GameController {
       startDate.setMonth(startDate.getMonth() - months);
 
       // Get all completed games in the date range
-      const games = await Games.find({
+      const games: any[] = await Games.find({
         "players.user": userId,
         status: "completed",
         completedAt: {
@@ -764,7 +798,7 @@ class GameController {
       }).populate("winner", "username");
 
       // Group games by month
-      const monthlyStats = {};
+      const monthlyStats: Record<string, any> = {};
 
       // Initialize months with zero values
       for (let i = 0; i < months; i++) {
@@ -782,7 +816,7 @@ class GameController {
       }
 
       // Process each game
-      games.forEach((game) => {
+      games.forEach((game: any) => {
         const gameDate = new Date(game.completedAt);
         const monthKey = gameDate.toLocaleString("en-US", { month: "short" });
 
@@ -791,10 +825,10 @@ class GameController {
 
           // Determine result
           const currentUser = game.players.find(
-            (p) => p.user.toString() === userId
+            (p: any) => p.user.toString() === userId
           );
           const opponent = game.players.find(
-            (p) => p.user.toString() !== userId
+            (p: any) => p.user.toString() !== userId
           );
 
           // Skip if we can't find both players
@@ -826,9 +860,9 @@ class GameController {
 
       // Convert to array and sort by month (most recent first)
       const performanceData = Object.values(monthlyStats)
-        .sort((a, b) => a.monthIndex - b.monthIndex)
+        .sort((a: any, b: any) => a.monthIndex - b.monthIndex)
         .reverse()
-        .map((stat) => ({
+        .map((stat: any) => ({
           month: stat.month,
           wins: stat.wins,
           losses: stat.losses,
@@ -841,15 +875,15 @@ class GameController {
       // Calculate overall stats for the period
       const totalGames = games.length;
       const totalWins = performanceData.reduce(
-        (sum, month) => sum + month.wins,
+        (sum: number, month: any) => sum + month.wins,
         0
       );
       const totalLosses = performanceData.reduce(
-        (sum, month) => sum + month.losses,
+        (sum: number, month: any) => sum + month.losses,
         0
       );
       const totalDraws = performanceData.reduce(
-        (sum, month) => sum + month.draws,
+        (sum: number, month: any) => sum + month.draws,
         0
       );
 
@@ -877,14 +911,14 @@ class GameController {
     }
   }
 
-  async getUserStats(req, res) {
+  async getUserStats(req: Request, res: Response) {
     try {
-      const userId = req.user.userId;
+      const userId = (req as any).user.userId;
 
       console.log(`Calculating user stats for user: ${userId}`);
 
       // Get all completed games for the user
-      const games = await Games.find({
+      const games: any[] = await Games.find({
         "players.user": userId,
         status: "completed",
       })
@@ -909,13 +943,13 @@ class GameController {
       let tempStreak = 0;
       let isStreakActive = true;
 
-      games.forEach((game, index) => {
-        const currUser = game.players.find((player) => {
+      games.forEach((game: any, index: number) => {
+        const currUser = game.players.find((player: any) => {
           const pid = player.user?._id ?? player.user;
           return pid && pid.toString() === userId;
         });
 
-        const opponent = game.players.find((player) => {
+        const opponent = game.players.find((player: any) => {
           const pid = player.user?._id ?? player.user;
           return pid && pid.toString() !== userId;
         });
@@ -979,7 +1013,8 @@ class GameController {
         // Calculate game duration
         if (game.completedAt && game.startedAt) {
           const duration =
-            new Date(game.completedAt) - new Date(game.startedAt);
+            new Date(game.completedAt).getTime() -
+            new Date(game.startedAt).getTime();
           if (duration > 0) {
             totalGameDuration += duration;
             validDurationGames++;
@@ -998,7 +1033,7 @@ class GameController {
           : 0;
 
       // Format average game duration
-      const formatAverageDuration = (seconds) => {
+      const formatAverageDuration = (seconds: number) => {
         if (seconds < 60) return `${seconds}s`;
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
@@ -1027,7 +1062,7 @@ class GameController {
         success: true,
         stats,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Get user stats error:", error);
       logger.error("Get user stats error:", error);
       res.status(500).json({
@@ -1039,7 +1074,10 @@ class GameController {
     }
   }
 
-  calculateStreaks(gameResults) {
+  calculateStreaks(gameResults: Array<{ result: string }>): {
+    currentStreak: number;
+    bestStreak: number;
+  } {
     if (gameResults.length === 0) {
       return { currentStreak: 0, bestStreak: 0 };
     }
@@ -1070,9 +1108,9 @@ class GameController {
     return { currentStreak, bestStreak };
   }
 
-  formatDate(date) {
+  formatDate(date: Date | string): string {
     const gameDate = new Date(date);
-    const options = {
+    const options: Intl.DateTimeFormatOptions = {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -1080,10 +1118,14 @@ class GameController {
     return gameDate.toLocaleDateString("en-US", options);
   }
 
-  formatDuration(completedAt, startedAt) {
+  formatDuration(
+    completedAt: Date | string,
+    startedAt: Date | string
+  ): string {
     if (!completedAt || !startedAt) return "N/A";
 
-    const durationMs = new Date(completedAt) - new Date(startedAt);
+    const durationMs =
+      new Date(completedAt).getTime() - new Date(startedAt).getTime();
     if (Number.isNaN(durationMs) || durationMs < 0) return "N/A";
 
     const totalSeconds = Math.floor(durationMs / 1000);
@@ -1093,11 +1135,11 @@ class GameController {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 
-  getTimeAgo(date) {
+  getTimeAgo(date: Date | string): string {
     if (!date) return "N/A";
     const now = new Date();
     const target = new Date(date);
-    const diffMs = now - target;
+    const diffMs = now.getTime() - target.getTime();
 
     // If date is in future or invalid
     if (Number.isNaN(diffMs)) return "N/A";

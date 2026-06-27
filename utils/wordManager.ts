@@ -1,18 +1,48 @@
-import WordBank from "../models/WordBank";
+import WordBank from "../models/WordBank.js";
+import logger from "../utils/logger.js";
+
+export interface SelectedWord {
+  _id: unknown;
+  word: string;
+  hint?: string;
+  category?: string;
+  length: number;
+  language: string;
+  difficulty: string;
+}
+
+export interface GuessValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+type DifficultyKey =
+  | "easy"
+  | "beginner"
+  | "normal"
+  | "classic"
+  | "medium"
+  | "hard"
+  | "expert"
+  | "custom";
 
 class WordManager {
-  async selectWord(language = "en", wordLength = 5, difficulty = "medium") {
+  async selectWord(
+    language = "en",
+    wordLength = 5,
+    difficulty = "medium"
+  ): Promise<SelectedWord | null> {
     try {
       logger.info(
         `Selecting word: language=${language}, length=${wordLength}, difficulty=${difficulty}`
       );
 
-      const query = {
-        lang: language,
-        len: wordLength,
+      const query: Record<string, unknown> = {
+        language,
+        length: wordLength,
       };
 
-      const difficultyMap = {
+      const difficultyMap: Record<DifficultyKey, string> = {
         easy: "easy",
         beginner: "easy",
         normal: "medium",
@@ -24,7 +54,7 @@ class WordManager {
       };
 
       const mappedDifficulty =
-        difficultyMap[difficulty.toLowerCase()] || "medium";
+        difficultyMap[difficulty.toLowerCase() as DifficultyKey] || "medium";
       query.difficulty = mappedDifficulty;
 
       const count = await WordBank.countDocuments(query);
@@ -46,37 +76,25 @@ class WordManager {
           );
           return null;
         }
-
-        // Select random word without difficulty filter
-        const results = await WordBank.aggregate([
-          { $match: query },
-          { $sample: { size: 1 } },
-        ]);
-        const selectedWord = results[0] || null;
-
-        logger.info(`Selected fallback word: ${selectedWord.word}`);
-
-        // Increment usage count asynchronously (don't wait)
-        selectedWord.incrementUsage().catch((err) => {
-          logger.error("Failed to increment word usage:", err);
-        });
-
-        return selectedWord;
       }
 
       const results = await WordBank.aggregate([
         { $match: query },
         { $sample: { size: 1 } },
       ]);
-      const selectedWord = results[0] || null;
+      const selectedWord = (results[0] as SelectedWord) || null;
 
       if (!selectedWord) {
-        logger.error("Failed to select word despite count > 0");
+        logger.error("Failed to select word despite matching documents");
         return null;
       }
 
-      // Increment usage count asynchronously (don't wait)
-      selectedWord.incrementUsage().catch((err) => {
+      // Increment usage count asynchronously (aggregate returns a plain
+      // object, so update by id rather than calling a document method).
+      WordBank.updateOne(
+        { _id: selectedWord._id },
+        { $inc: { usageCount: 1 } }
+      ).catch((err: unknown) => {
         logger.error("Failed to increment word usage:", err);
       });
 
@@ -91,11 +109,11 @@ class WordManager {
     }
   }
 
-  async validateWord(word, language = "en") {
+  async validateWord(word: string, language = "en"): Promise<boolean> {
     try {
       const exists = await WordBank.exists({
         word: word.toUpperCase(),
-        language: language,
+        language,
       });
 
       return !!exists;
@@ -105,7 +123,11 @@ class WordManager {
     }
   }
 
-  async validateGuess(word, expectedLength, language = "en") {
+  async validateGuess(
+    word: string,
+    expectedLength: number,
+    language = "en"
+  ): Promise<GuessValidationResult> {
     try {
       // Check length first
       if (word.length !== expectedLength) {
@@ -125,9 +147,7 @@ class WordManager {
         };
       }
 
-      return {
-        valid: true,
-      };
+      return { valid: true };
     } catch (error) {
       logger.error("Error validating guess:", error);
       return {
@@ -137,9 +157,13 @@ class WordManager {
     }
   }
 
-  async updateWordStats(wordId, wasGuessed, guessTime) {
+  async updateWordStats(
+    wordId: unknown,
+    wasGuessed: boolean,
+    guessTime: number
+  ): Promise<void> {
     try {
-      const word = await WordBank.findById(wordId);
+      const word: any = await WordBank.findById(wordId);
       if (!word) {
         logger.warn(`Word not found for stats update: ${wordId}`);
         return;
@@ -170,3 +194,5 @@ class WordManager {
     }
   }
 }
+
+export default new WordManager();

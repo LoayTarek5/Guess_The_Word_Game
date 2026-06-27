@@ -1,30 +1,42 @@
+import type { Socket } from "socket.io";
 import { getIO, getUserSocketId } from "../socketServer.js";
-import Room from "../../models/Room.js";
 import Game from "../../models/Games.js";
 import logger from "../../utils/logger.js";
+import type {
+  GameStartedPayload,
+  GameStatePayload,
+  GuessResultPayload,
+  TurnChangePayload,
+  RoundCompletePayload,
+  GameOverPayload,
+  ScoreUpdatePayload,
+  PlayerConnectionPayload,
+} from "../../types/game.js";
 
-export const setupGameHandlers = (socket) => {
+/** A socket authenticated by socketAuth (carries the resolved userId). */
+type GameSocket = Socket & { userId: string };
+
+export const setupGameHandlers = (socket: GameSocket): void => {
   logger.info(
     `Setting up game handlers for socket: ${socket.id}, user: ${socket.userId}`
   );
-  socket.on("game:requestState", async (data) => {
+
+  socket.on("game:requestState", async (data: { gameId: string }) => {
     try {
       const { gameId } = data;
       const userId = socket.userId;
 
-      const game = await Game.findOne({ gameId })
+      const game: any = await Game.findOne({ gameId })
         .populate("players.user", "username avatar")
         .populate("currentTurn", "username avatar");
 
       if (!game) {
-        return socket.emit("game:error", {
-          message: "Game not found",
-        });
+        return socket.emit("game:error", { message: "Game not found" });
       }
 
       // Verify user is in game
       const isPlayer = game.players.some(
-        (p) => p.user._id.toString() === userId
+        (p: any) => p.user._id.toString() === userId
       );
 
       if (!isPlayer) {
@@ -34,12 +46,12 @@ export const setupGameHandlers = (socket) => {
       }
 
       // Prepare game state (hide the actual word)
-      const gameState = {
+      const gameState: GameStatePayload = {
         gameId: game.gameId,
         status: game.status,
         currentRound: game.currentRound,
         currentTurn: {
-          userId: game.currentTurn._id,
+          userId: game.currentTurn._id.toString(),
           username: game.currentTurn.username,
           avatar: game.currentTurn.avatar,
         },
@@ -48,8 +60,8 @@ export const setupGameHandlers = (socket) => {
         currentAttempts: game.currentWord.attempts || 0,
         hint: game.currentWord.hint,
         category: game.currentWord.category,
-        players: game.players.map((player) => ({
-          userId: player.user._id,
+        players: game.players.map((player: any) => ({
+          userId: player.user._id.toString(),
           username: player.user.username,
           avatar: player.user.avatar,
           score: player.score,
@@ -64,14 +76,15 @@ export const setupGameHandlers = (socket) => {
       socket.emit("game:stateUpdate", gameState);
     } catch (error) {
       logger.error("Error requesting game state:", error);
-      socket.emit("game:error", {
-        message: "Failed to get game state",
-      });
+      socket.emit("game:error", { message: "Failed to get game state" });
     }
   });
 };
 
-export const emitGameStarted = (roomId, gameData) => {
+export const emitGameStarted = (
+  roomId: string,
+  gameData: GameStartedPayload
+): void => {
   try {
     const io = getIO();
     io.to(`room:${roomId}`).emit("game:started", gameData);
@@ -81,7 +94,10 @@ export const emitGameStarted = (roomId, gameData) => {
   }
 };
 
-export const emitGuessResult = (gameId, guessResult) => {
+export const emitGuessResult = (
+  gameId: string,
+  guessResult: GuessResultPayload
+): void => {
   try {
     const io = getIO();
     io.to(`game:${gameId}`).emit("game:guessResult", guessResult);
@@ -95,21 +111,21 @@ export const emitGuessResult = (gameId, guessResult) => {
   }
 };
 
-export const emitGameError = (target, errorMessage, isGame = false) => {
+export const emitGameError = (
+  target: string,
+  errorMessage: string,
+  isGame = false
+): void => {
   try {
     const io = getIO();
 
     if (isGame) {
-      io.to(`game:${target}`).emit("game:error", {
-        message: errorMessage,
-      });
+      io.to(`game:${target}`).emit("game:error", { message: errorMessage });
     } else {
       // Target is userId
       const socketId = getUserSocketId(target);
       if (socketId) {
-        io.to(socketId).emit("game:error", {
-          message: errorMessage,
-        });
+        io.to(socketId).emit("game:error", { message: errorMessage });
       }
     }
 
@@ -119,7 +135,10 @@ export const emitGameError = (target, errorMessage, isGame = false) => {
   }
 };
 
-export const emitTurnChange = (gameId, turnData) => {
+export const emitTurnChange = (
+  gameId: string,
+  turnData: TurnChangePayload
+): void => {
   try {
     const io = getIO();
     io.to(`game:${gameId}`).emit("game:turnChange", turnData);
@@ -132,10 +151,13 @@ export const emitTurnChange = (gameId, turnData) => {
   }
 };
 
-export const emitRoundComplete = (gameId, roundResult) => {
+export const emitRoundComplete = (
+  gameId: string,
+  roundResult: RoundCompletePayload
+): void => {
   try {
     const io = getIO();
-    
+
     io.to(`game:${gameId}`).emit("game:roundComplete", {
       ...roundResult,
       timestamp: new Date(),
@@ -153,10 +175,13 @@ export const emitRoundComplete = (gameId, roundResult) => {
   }
 };
 
-export const emitGameOver = (gameId, gameResult) => {
+export const emitGameOver = (
+  gameId: string,
+  gameResult: GameOverPayload
+): void => {
   try {
     const io = getIO();
-    
+
     io.to(`game:${gameId}`).emit("game:over", {
       ...gameResult,
       timestamp: new Date(),
@@ -174,10 +199,13 @@ export const emitGameOver = (gameId, gameResult) => {
   }
 };
 
-export const emitTimerUpdate = (gameId, timeRemaining) => {
+export const emitTimerUpdate = (
+  gameId: string,
+  timeRemaining: number
+): void => {
   try {
     const io = getIO();
-    
+
     io.to(`game:${gameId}`).emit("game:timerUpdate", {
       timeRemaining,
       timestamp: new Date(),
@@ -187,10 +215,10 @@ export const emitTimerUpdate = (gameId, timeRemaining) => {
   }
 };
 
-export const emitTimeExpired = (gameId) => {
+export const emitTimeExpired = (gameId: string): void => {
   try {
     const io = getIO();
-    
+
     io.to(`game:${gameId}`).emit("game:timeExpired", {
       message: "Time's up!",
       timestamp: new Date(),
@@ -202,10 +230,13 @@ export const emitTimeExpired = (gameId) => {
   }
 };
 
-export const emitPlayerDisconnected = (gameId, playerData) => {
+export const emitPlayerDisconnected = (
+  gameId: string,
+  playerData: PlayerConnectionPayload
+): void => {
   try {
     const io = getIO();
-    
+
     io.to(`game:${gameId}`).emit("game:playerDisconnected", {
       userId: playerData.userId,
       username: playerData.username,
@@ -220,28 +251,32 @@ export const emitPlayerDisconnected = (gameId, playerData) => {
   }
 };
 
-export const emitPlayerReconnected = (gameId, playerData) => {
+export const emitPlayerReconnected = (
+  gameId: string,
+  playerData: PlayerConnectionPayload
+): void => {
   try {
     const io = getIO();
-    
+
     io.to(`game:${gameId}`).emit("game:playerReconnected", {
       userId: playerData.userId,
       username: playerData.username,
       timestamp: new Date(),
     });
 
-    logger.info(
-      `Player ${playerData.username} reconnected to game ${gameId}`
-    );
+    logger.info(`Player ${playerData.username} reconnected to game ${gameId}`);
   } catch (error) {
     logger.error("Error emitting player reconnected:", error);
   }
 };
 
-export const emitScoreUpdate = (gameId, scores) => {
+export const emitScoreUpdate = (
+  gameId: string,
+  scores: ScoreUpdatePayload["scores"]
+): void => {
   try {
     const io = getIO();
-    
+
     io.to(`game:${gameId}`).emit("game:scoreUpdate", {
       scores,
       timestamp: new Date(),
@@ -253,9 +288,14 @@ export const emitScoreUpdate = (gameId, scores) => {
   }
 };
 
-export const broadcastToGame = (gameId, event, data, excludeUserId = null) => {
+export const broadcastToGame = (
+  gameId: string,
+  event: string,
+  data: unknown,
+  excludeUserId: string | null = null
+): void => {
   const io = getIO();
-  
+
   if (excludeUserId) {
     const socketId = getUserSocketId(excludeUserId);
     if (socketId) {

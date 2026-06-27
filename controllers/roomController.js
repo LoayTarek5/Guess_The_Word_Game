@@ -5,12 +5,14 @@ import Notification from "../models/Notification.js";
 import Friendship from "../models/Friendship.js";
 import Room from "../models/Room.js";
 import logger from "../utils/logger.js";
+import WordManager from "../utils/wordManager.js";
 import {
   emitPlayerJoined,
   emitPlayerLeft,
   emitRoomSettingsUpdate,
   emitRoomInvitation,
 } from "../socket/handlers/roomHandler.js";
+import { emitGameStarted } from "../socket/handlers/gameHandler.js";
 import { emitNotificationToUser } from "../socket/handlers/notificationHandler.js";
 
 class RoomController {
@@ -40,7 +42,7 @@ class RoomController {
         });
       }
 
-      if (room.status !== "waiting" || room.status !== "full") {
+      if (room.status !== "waiting" && room.status !== "full") {
         return res.status(400).json({
           success: false,
           message: "Game already in progress or Closed",
