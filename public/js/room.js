@@ -32,6 +32,14 @@ function setupRoomSocketHandlers() {
   window.socketManager.on("room:playerLeft", handlePlayerLeft);
   window.socketManager.on("room:settingsUpdated", handleSettingsUpdate);
 
+  // When the host starts the game, every player in the room is sent to the
+  // gameplay page for the new game.
+  window.socketManager.on("game:started", (data) => {
+    if (!data || !data.gameId) return;
+    sessionStorage.setItem("activeGameId", data.gameId);
+    window.location.href = `/gameplay?gameId=${data.gameId}`;
+  });
+
   // Setup leave handler when leaving page
   window.addEventListener("beforeunload", () => {
     if (currentRoom && currentRoom.roomId) {
@@ -976,8 +984,31 @@ function initializeChatSocket() {
 
 function setupRoomEventListeners() {
   const startBtn = document.querySelector(".start-game-btn");
-  startBtn.addEventListener("click", () => {
-    alert("Starting game...");
+  startBtn.addEventListener("click", async () => {
+    if (!currentRoom || !currentRoom.roomId) return;
+    startBtn.disabled = true;
+    try {
+      const response = await fetch(`/gameplay/start/${currentRoom.roomId}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        startBtn.disabled = false;
+        showNotification(result.message || "Failed to start game", "error");
+        return;
+      }
+      // Navigation happens for all players via the "game:started" socket
+      // event; stash the id as a fallback for the host.
+      if (result.gameId) {
+        sessionStorage.setItem("activeGameId", result.gameId);
+      }
+    } catch (error) {
+      console.error("Start game error:", error);
+      startBtn.disabled = false;
+      showNotification("Failed to start game", "error");
+    }
   });
 
   document.getElementById("copyCode").addEventListener("click", () => {
