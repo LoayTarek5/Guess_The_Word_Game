@@ -5,8 +5,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node server",
-    "dev": "node --watch --env-file=.env server",
+    "start": "tsx server.js",
+    "dev": "tsx watch server.js",
+    "typecheck": "tsc --noEmit",
+    "build:client": "esbuild public/ts/gameplay.ts --bundle --format=iife --target=es2022 --outfile=public/js/gameplay.js",
     "seedGames": "node scripts/createTestGames.js",
     "seedFriends": "node scripts/createTestFriends.js",
     "seedNotifications": "node scripts/createTestNotifications.js"
@@ -48,6 +50,11 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.0.1",
+    "esbuild": "^0.28.1",
+    "nodemon": "^3.1.10",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
   }
 }
