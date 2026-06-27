@@ -12,7 +12,10 @@ import {
   emitRoomSettingsUpdate,
   emitRoomInvitation,
 } from "../socket/handlers/roomHandler.js";
-import { emitGameStarted } from "../socket/handlers/gameHandler.js";
+import {
+  emitGameStarted,
+  addPlayersToGameRoom,
+} from "../socket/handlers/gameHandler.js";
 import { emitNotificationToUser } from "../socket/handlers/notificationHandler.js";
 
 class RoomController {
@@ -170,6 +173,13 @@ class RoomController {
         },
         roundStartTime: new Date(),
       };
+
+      // Join every connected player's socket to the game room so the
+      // real-time guess broadcasts reach them.
+      addPlayersToGameRoom(
+        game.gameId,
+        room.players.map((p) => p.user._id.toString())
+      );
 
       emitGameStarted(room.roomId, gameData);
 

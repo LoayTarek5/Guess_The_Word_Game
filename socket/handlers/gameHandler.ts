@@ -2,6 +2,7 @@ import type { Socket } from "socket.io";
 import { getIO, getUserSocketId } from "../socketServer.js";
 import Game from "../../models/Games.js";
 import logger from "../../utils/logger.js";
+import gameController from "../../controllers/gameController.js";
 import type {
   GameStartedPayload,
   GameStatePayload,
@@ -11,74 +12,133 @@ import type {
   GameOverPayload,
   ScoreUpdatePayload,
   PlayerConnectionPayload,
+  JoinGamePayload,
+  RequestStatePayload,
+  SubmitGuessPayload,
 } from "../../types/game.js";
 
 /** A socket authenticated by socketAuth (carries the resolved userId). */
 type GameSocket = Socket & { userId: string };
+
+/** Build the client-facing game state (the target word is never included). */
+const buildGameState = (game: any): GameStatePayload => ({
+  gameId: game.gameId,
+  status: game.status,
+  currentRound: game.currentRound,
+  currentTurn: {
+    userId: game.currentTurn._id.toString(),
+    username: game.currentTurn.username,
+    avatar: game.currentTurn.avatar,
+  },
+  wordLength: game.currentWord.word.length,
+  maxTries: game.gameSettings.maxTries,
+  currentAttempts: game.currentWord.attempts || 0,
+  hint: game.currentWord.hint,
+  category: game.currentWord.category,
+  players: game.players.map((player: any) => ({
+    userId: player.user._id.toString(),
+    username: player.user.username,
+    avatar: player.user.avatar,
+    score: player.score,
+    wordsGuessed: player.wordsGuessed,
+    isCurrentTurn:
+      player.user._id.toString() === game.currentTurn._id.toString(),
+  })),
+  settings: game.gameSettings,
+  roundStartTime: game.startedAt,
+});
+
+/** Load a game and confirm the requesting user is a participant. */
+const loadGameForUser = async (
+  gameId: string,
+  userId: string
+): Promise<{ game?: any; error?: string }> => {
+  const game: any = await Game.findOne({ gameId })
+    .populate("players.user", "username avatar")
+    .populate("currentTurn", "username avatar");
+
+  if (!game) return { error: "Game not found" };
+
+  const isPlayer = game.players.some(
+    (p: any) => p.user._id.toString() === userId
+  );
+  if (!isPlayer) return { error: "You are not in this game" };
+
+  return { game };
+};
 
 export const setupGameHandlers = (socket: GameSocket): void => {
   logger.info(
     `Setting up game handlers for socket: ${socket.id}, user: ${socket.userId}`
   );
 
-  socket.on("game:requestState", async (data: { gameId: string }) => {
+  // Join the game room so this socket receives game broadcasts, then send
+  // the current state. Used when a player opens the gameplay page.
+  socket.on("game:join", async (data: JoinGamePayload) => {
     try {
-      const { gameId } = data;
-      const userId = socket.userId;
-
-      const game: any = await Game.findOne({ gameId })
-        .populate("players.user", "username avatar")
-        .populate("currentTurn", "username avatar");
-
-      if (!game) {
-        return socket.emit("game:error", { message: "Game not found" });
+      const { game, error } = await loadGameForUser(data.gameId, socket.userId);
+      if (error || !game) {
+        return socket.emit("game:error", { message: error || "Game not found" });
       }
 
-      // Verify user is in game
-      const isPlayer = game.players.some(
-        (p: any) => p.user._id.toString() === userId
-      );
+      socket.join(`game:${game.gameId}`);
+      logger.info(`Socket ${socket.id} joined game room: ${game.gameId}`);
+      socket.emit("game:stateUpdate", buildGameState(game));
+    } catch (err) {
+      logger.error("Error joining game:", err);
+      socket.emit("game:error", { message: "Failed to join game" });
+    }
+  });
 
-      if (!isPlayer) {
-        return socket.emit("game:error", {
-          message: "You are not in this game",
-        });
+  socket.on("game:requestState", async (data: RequestStatePayload) => {
+    try {
+      const { game, error } = await loadGameForUser(data.gameId, socket.userId);
+      if (error || !game) {
+        return socket.emit("game:error", { message: error || "Game not found" });
       }
-
-      // Prepare game state (hide the actual word)
-      const gameState: GameStatePayload = {
-        gameId: game.gameId,
-        status: game.status,
-        currentRound: game.currentRound,
-        currentTurn: {
-          userId: game.currentTurn._id.toString(),
-          username: game.currentTurn.username,
-          avatar: game.currentTurn.avatar,
-        },
-        wordLength: game.currentWord.word.length,
-        maxTries: game.gameSettings.maxTries,
-        currentAttempts: game.currentWord.attempts || 0,
-        hint: game.currentWord.hint,
-        category: game.currentWord.category,
-        players: game.players.map((player: any) => ({
-          userId: player.user._id.toString(),
-          username: player.user.username,
-          avatar: player.user.avatar,
-          score: player.score,
-          wordsGuessed: player.wordsGuessed,
-          isCurrentTurn:
-            player.user._id.toString() === game.currentTurn._id.toString(),
-        })),
-        settings: game.gameSettings,
-        roundStartTime: game.startedAt,
-      };
-
-      socket.emit("game:stateUpdate", gameState);
+      socket.emit("game:stateUpdate", buildGameState(game));
     } catch (error) {
       logger.error("Error requesting game state:", error);
       socket.emit("game:error", { message: "Failed to get game state" });
     }
   });
+
+  // Single real-time guess path. Validation, scoring and broadcasts all
+  // happen inside processGuess; only the submitting socket needs an error.
+  socket.on("game:submitGuess", async (data: SubmitGuessPayload) => {
+    try {
+      const result = await gameController.processGuess(
+        data.gameId,
+        socket.userId,
+        data.guess
+      );
+      if (!result.ok) {
+        socket.emit("game:error", { message: result.message });
+      }
+    } catch (error) {
+      logger.error("Socket submit guess error:", error);
+      socket.emit("game:error", { message: "Failed to submit guess" });
+    }
+  });
+};
+
+/** Join every connected player's socket to the game room when a game starts. */
+export const addPlayersToGameRoom = (
+  gameId: string,
+  userIds: string[]
+): void => {
+  try {
+    const io = getIO();
+    for (const userId of userIds) {
+      const socketId = getUserSocketId(userId);
+      if (socketId) {
+        io.sockets.sockets.get(socketId)?.join(`game:${gameId}`);
+      }
+    }
+    logger.info(`Added players to game room: ${gameId}`);
+  } catch (error) {
+    logger.error("Error adding players to game room:", error);
+  }
 };
 
 export const emitGameStarted = (

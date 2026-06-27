@@ -267,30 +267,6 @@ class GameController {
     };
   }
 
-  async submitGuess(req: Request, res: Response) {
-    try {
-      const gameId = req.params.gameId as string;
-      const { guess } = req.body;
-      const userId = (req as any).user.userId;
-
-      const result = await this.processGuess(gameId, userId, guess);
-
-      if (!result.ok) {
-        return res
-          .status(result.status)
-          .json({ success: false, message: result.message });
-      }
-
-      res.json({ success: true, ...result });
-    } catch (error) {
-      logger.error("Submit guess error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to submit guess",
-      });
-    }
-  }
-
   compareWords(guess: string, target: string): LetterFeedback[] {
     const feedback: LetterFeedback[] = [];
     const targetLetters = target.split("");

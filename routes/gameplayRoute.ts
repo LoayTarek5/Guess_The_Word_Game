@@ -21,18 +21,11 @@ router.post(
   (roomController as any).startGame.bind(roomController)
 );
 
-// Get current game state
+// Get current game state (read-only; guesses go through the socket path)
 router.get(
   "/state/:gameId",
   requireAuth,
   gameController.getGameState.bind(gameController)
-);
-
-// Submit a guess
-router.post(
-  "/guess/:gameId",
-  requireAuth,
-  gameController.submitGuess.bind(gameController)
 );
 
 export default router;
