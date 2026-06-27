@@ -265,9 +265,11 @@ function handleGuessResult(result: GuessResultPayload): void {
   const slot = slots.get(result.userId);
   if (!slot) return;
 
-  renderGuessRow(slot.grid, result.attempts - 1, result.feedback);
-  slot.attempt = result.attempts;
-  if (slot.triesEl) slot.triesEl.textContent = String(result.attempts);
+  // Fill this player's own next empty row (attempts are shared per round,
+  // so track each grid independently to keep guesses top-down).
+  renderGuessRow(slot.grid, slot.attempt, result.feedback);
+  slot.attempt += 1;
+  if (slot.triesEl) slot.triesEl.textContent = String(slot.attempt);
   if (result.userId === myUserId) updateGuessCount();
 }
 
